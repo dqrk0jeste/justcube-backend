@@ -6,9 +6,24 @@ import (
 	"strings"
 
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
+	"github.com/dqrk0jeste/letscube-backend/util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+type userResponse struct {
+	ID           uuid.UUID `json:"id"`
+	Username     string    `json:"username"`
+	ProfileImage string    `json:"profile_image"`
+}
+
+func makeUserResponse(user database.User) userResponse {
+	return userResponse{
+		ID:           user.ID,
+		Username:     user.Username,
+		ProfileImage: user.ProfileImage.String,
+	}
+}
 
 type CreateUserRequest struct {
 	Username     string         `json:"username" binding:"required"`
@@ -23,10 +38,22 @@ func (server *Server) createUser(context *gin.Context) {
 		return
 	}
 
+	id, err := uuid.NewRandom()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	passwordHash, err := util.GeneratePasswordHash(req.Password)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	arg := database.CreateUserParams{
-		ID:           uuid.New(),
+		ID:           id,
 		Username:     strings.Trim(req.Username, " "),
-		PasswordHash: req.Password,
+		PasswordHash: passwordHash,
 		ProfileImage: req.ProfileImage,
 	}
 
@@ -40,6 +67,51 @@ func (server *Server) createUser(context *gin.Context) {
 		"id":            user.ID,
 		"username":      user.Username,
 		"profile_image": user.ProfileImage.String,
+	})
+}
+
+type loginUserRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type loginUserResponse struct {
+	Token string       `json:"token"`
+	User  userResponse `json:"user"`
+}
+
+func (server *Server) loginUser(context *gin.Context) {
+	var req loginUserRequest
+	if err := context.ShouldBindJSON(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.database.GetUserByUsername(context, req.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			context.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	err = util.VerifyPassword(req.Password, user.PasswordHash)
+	if err != nil {
+		context.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	token, err := server.tokenMaker.CreateToken(req.Username, server.config.TokenDuration)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusOK, loginUserResponse{
+		Token: token,
+		User:  makeUserResponse(user),
 	})
 }
 

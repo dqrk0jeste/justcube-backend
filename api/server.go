@@ -2,31 +2,49 @@ package api
 
 import (
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
+	"github.com/dqrk0jeste/letscube-backend/token"
+	"github.com/dqrk0jeste/letscube-backend/util"
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
-	database *database.Queries
-	router   *gin.Engine
+	config     util.Config
+	database   *database.Queries
+	tokenMaker token.PasetoMaker
+	router     *gin.Engine
 }
 
-func CreateServer(database *database.Queries) *Server {
-	router := gin.Default()
-
-	server := &Server{
-		database: database,
-		router:   router,
+func CreateServer(config util.Config, database *database.Queries) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSecret)
+	if err != nil {
+		return nil, err
 	}
 
-	router.POST("/users", server.createUser)
-	router.GET("/users/:id", server.getUserById)
-	router.GET("/users", server.getUsersByUsername)
+	server := &Server{
+		config:     config,
+		database:   database,
+		tokenMaker: *tokenMaker,
+	}
 
-	return server
+	server.addRouter()
+
+	return server, nil
 }
 
 func (server *Server) Start(address string) error {
 	return server.router.Run(address)
+}
+
+func (server *Server) addRouter() {
+	router := gin.Default()
+
+	router.POST("/users", server.createUser)
+	router.POST("/users/login", server.loginUser)
+
+	router.GET("/users/:id", server.getUserById)
+	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
+
+	server.router = router
 }
 
 func errorResponse(err error) gin.H {

@@ -22,10 +22,13 @@ func main() {
 	}
 
 	database := database.New(connection)
-	server := api.CreateServer(database)
+	server, err := api.CreateServer(config, database)
+	if err != nil {
+		log.Fatal("error making a server: ", err)
+	}
 
 	err = server.Start(config.ServerAddress)
 	if err != nil {
-		log.Fatal("error while starting a server")
+		log.Fatal("error while starting a server", err)
 	}
 }
