@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strings"
+	"time"
 
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
 	"github.com/dqrk0jeste/letscube-backend/util"
@@ -15,20 +16,21 @@ type userResponse struct {
 	ID           uuid.UUID `json:"id"`
 	Username     string    `json:"username"`
 	ProfileImage string    `json:"profile_image"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 func makeUserResponse(user database.User) userResponse {
 	return userResponse{
 		ID:           user.ID,
 		Username:     user.Username,
-		ProfileImage: user.ProfileImage.String,
+		ProfileImage: user.ProfileImage,
+		CreatedAt:    user.CreatedAt,
 	}
 }
 
 type CreateUserRequest struct {
-	Username     string         `json:"username" binding:"required"`
-	Password     string         `json:"password" binding:"required"`
-	ProfileImage sql.NullString `json:"profile_image"`
+	Username string `json:"username" binding:"required,printascii"`
+	Password string `json:"password" binding:"required,printascii"`
 }
 
 func (server *Server) createUser(context *gin.Context) {
@@ -54,7 +56,6 @@ func (server *Server) createUser(context *gin.Context) {
 		ID:           id,
 		Username:     strings.Trim(req.Username, " "),
 		PasswordHash: passwordHash,
-		ProfileImage: req.ProfileImage,
 	}
 
 	user, err := server.database.CreateUser(context, arg)
@@ -63,16 +64,12 @@ func (server *Server) createUser(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusCreated, gin.H{
-		"id":            user.ID,
-		"username":      user.Username,
-		"profile_image": user.ProfileImage.String,
-	})
+	context.JSON(http.StatusCreated, makeUserResponse(user))
 }
 
 type loginUserRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required,printascii"`
+	Password string `json:"password" binding:"required,printascii"`
 }
 
 type loginUserResponse struct {
@@ -103,7 +100,7 @@ func (server *Server) loginUser(context *gin.Context) {
 		return
 	}
 
-	token, err := server.tokenMaker.CreateToken(req.Username, server.config.TokenDuration)
+	token, err := server.tokenMaker.CreateToken(user.ID, server.config.TokenDuration)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -142,17 +139,13 @@ func (server *Server) getUserById(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, gin.H{
-		"id":            user.ID,
-		"username":      user.Username,
-		"profile_image": user.ProfileImage.String,
-	})
+	context.JSON(http.StatusOK, makeUserResponse(user))
 }
 
 type GetUsersByUsernameRequest struct {
 	Page     int32  `form:"page_number" binding:"required"`
-	PageSize int32  `form:"page_size" binding:"required"`
-	Input    string `form:"input" binding:"required"`
+	PageSize int32  `form:"page_size" binding:"required,min=1,max=20"`
+	Input    string `form:"input" binding:"required,min=3,printascii"`
 }
 
 func (server *Server) getUsersByUsername(context *gin.Context) {
@@ -174,15 +167,35 @@ func (server *Server) getUsersByUsername(context *gin.Context) {
 		return
 	}
 
-	res := make([]gin.H, 0)
+	res := make([]userResponse, 0)
 
 	for _, user := range users {
-		res = append(res, gin.H{
-			"id":            user.ID,
-			"username":      user.Username,
-			"profile_image": user.ProfileImage.String,
-		})
+		res = append(res, makeUserResponse(user))
 	}
 
 	context.JSON(http.StatusOK, res)
 }
+
+// type GetUserByUsernameRequest struct {
+// 	Username string `uri:"username" binding:"required"`
+// }
+
+// func (server *Server) getUserByUsername(context *gin.Context) {
+// 	var req GetUserByUsernameRequest
+// 	if err := context.ShouldBindUri(&req); err != nil {
+// 		context.JSON(http.StatusBadRequest, errorResponse(err))
+// 		return
+// 	}
+
+// 	user, err := server.database.GetUserByUsername(context, req.Username)
+// 	if err != nil {
+// 		if err == sql.ErrNoRows {
+// 			context.JSON(http.StatusNotFound, errorResponse(err))
+// 			return
+// 		}
+// 		context.JSON(http.StatusInternalServerError, errorResponse(err))
+// 		return
+// 	}
+
+// 	context.JSON(http.StatusOK, makeUserResponse(user))
+// }

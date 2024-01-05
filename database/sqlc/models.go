@@ -5,7 +5,6 @@
 package database
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,23 +22,21 @@ type Message struct {
 	Content    string    `json:"content"`
 	FromUserID uuid.UUID `json:"from_user_id"`
 	ToUserID   uuid.UUID `json:"to_user_id"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type Post struct {
 	ID          uuid.UUID `json:"id"`
 	TextContent string    `json:"text_content"`
+	ImageNumber int32     `json:"image_number"`
 	UserID      uuid.UUID `json:"user_id"`
-}
-
-type PostImage struct {
-	ID     uuid.UUID `json:"id"`
-	Image  string    `json:"image"`
-	PostID uuid.UUID `json:"post_id"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type User struct {
-	ID           uuid.UUID      `json:"id"`
-	Username     string         `json:"username"`
-	PasswordHash string         `json:"password_hash"`
-	ProfileImage sql.NullString `json:"profile_image"`
+	ID           uuid.UUID `json:"id"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	ProfileImage string    `json:"profile_image"`
+	CreatedAt    time.Time `json:"created_at"`
 }

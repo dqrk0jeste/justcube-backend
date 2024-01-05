@@ -44,6 +44,10 @@ func (server *Server) addRouter() {
 	router.GET("/users/:id", server.getUserById)
 	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
 
+	router.POST("/posts", server.authMiddleware, server.CreatePost)
+	router.GET("/posts/:id", server.GetPostById)
+	router.GET("/posts", server.GetPostsByUser)
+
 	server.router = router
 }
 

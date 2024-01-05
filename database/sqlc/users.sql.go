@@ -7,43 +7,37 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users(id, username, password_hash, profile_image)
-VALUES ($1, $2, $3, $4)
-RETURNING id, username, password_hash, profile_image
+INSERT INTO users(id, username, password_hash)
+VALUES ($1, $2, $3)
+RETURNING id, username, password_hash, profile_image, created_at
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID      `json:"id"`
-	Username     string         `json:"username"`
-	PasswordHash string         `json:"password_hash"`
-	ProfileImage sql.NullString `json:"profile_image"`
+	ID           uuid.UUID `json:"id"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser,
-		arg.ID,
-		arg.Username,
-		arg.PasswordHash,
-		arg.ProfileImage,
-	)
+	row := q.db.QueryRowContext(ctx, createUser, arg.ID, arg.Username, arg.PasswordHash)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
 		&i.ProfileImage,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, password_hash, profile_image FROM users WHERE id = $1 LIMIT 1
+SELECT id, username, password_hash, profile_image, created_at FROM users WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
@@ -54,12 +48,13 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Username,
 		&i.PasswordHash,
 		&i.ProfileImage,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, profile_image FROM users WHERE username = $1 LIMIT 1
+SELECT id, username, password_hash, profile_image, created_at FROM users WHERE username = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -70,12 +65,13 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Username,
 		&i.PasswordHash,
 		&i.ProfileImage,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUsersByUsername = `-- name: GetUsersByUsername :many
-SELECT id, username, password_hash, profile_image FROM users
+SELECT id, username, password_hash, profile_image, created_at FROM users
 WHERE username LIKE $3
 ORDER BY username ASC
 LIMIT $1 OFFSET $2
@@ -101,6 +97,7 @@ func (q *Queries) GetUsersByUsername(ctx context.Context, arg GetUsersByUsername
 			&i.Username,
 			&i.PasswordHash,
 			&i.ProfileImage,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
