@@ -28,7 +28,7 @@ type Message struct {
 type Post struct {
 	ID          uuid.UUID `json:"id"`
 	TextContent string    `json:"text_content"`
-	ImageNumber int32     `json:"image_number"`
+	ImageCount  int32     `json:"image_count"`
 	UserID      uuid.UUID `json:"user_id"`
 	CreatedAt   time.Time `json:"created_at"`
 }

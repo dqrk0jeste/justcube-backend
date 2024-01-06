@@ -7,11 +7,14 @@ import (
 )
 
 type Config struct {
-	DatabaseSource string        `mapstructure:"DB_SOURCE"`
-	DatabaseDriver string        `mapstructure:"DB_DRIVER"`
-	ServerAddress  string        `mapstructure:"SERVER_ADDRESS"`
-	TokenSecret    string        `mapstructure:"TOKEN_SECRET"`
-	TokenDuration  time.Duration `mapstructure:"TOKEN_DURATION"`
+	DatabaseSource        string        `mapstructure:"DB_SOURCE"`
+	DatabaseDriver        string        `mapstructure:"DB_DRIVER"`
+	ServerAddress         string        `mapstructure:"SERVER_ADDRESS"`
+	TokenSecret           string        `mapstructure:"TOKEN_SECRET"`
+	TokenDuration         time.Duration `mapstructure:"TOKEN_DURATION"`
+	AWS_REGION            string        `mapstructure:"AWS_REGION"`
+	AWS_ACCESS_KEY_ID     string        `mapstructure:"AWS_ACCESS_KEY_ID"`
+	AWS_SECRET_ACCESS_KEY string        `mapstructure:"AWS_SECRET_ACCESS_KEY"`
 }
 
 func LoadConfig(path string) (config Config, err error) {

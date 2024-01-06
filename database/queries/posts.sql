@@ -1,6 +1,6 @@
 -- name: CreatePost :one
-INSERT INTO posts(id, text_content, user_id)
-VALUES ($1, $2, $3)
+INSERT INTO posts(id, text_content, image_count, user_id)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetPostById :one

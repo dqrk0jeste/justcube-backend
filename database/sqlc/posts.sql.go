@@ -12,24 +12,30 @@ import (
 )
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO posts(id, text_content, user_id)
-VALUES ($1, $2, $3)
-RETURNING id, text_content, image_number, user_id, created_at
+INSERT INTO posts(id, text_content, image_count, user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, text_content, image_count, user_id, created_at
 `
 
 type CreatePostParams struct {
 	ID          uuid.UUID `json:"id"`
 	TextContent string    `json:"text_content"`
+	ImageCount  int32     `json:"image_count"`
 	UserID      uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, createPost, arg.ID, arg.TextContent, arg.UserID)
+	row := q.db.QueryRowContext(ctx, createPost,
+		arg.ID,
+		arg.TextContent,
+		arg.ImageCount,
+		arg.UserID,
+	)
 	var i Post
 	err := row.Scan(
 		&i.ID,
 		&i.TextContent,
-		&i.ImageNumber,
+		&i.ImageCount,
 		&i.UserID,
 		&i.CreatedAt,
 	)
@@ -37,7 +43,7 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 }
 
 const getPostById = `-- name: GetPostById :one
-SELECT id, text_content, image_number, user_id, created_at FROM posts WHERE id = $1 LIMIT 1
+SELECT id, text_content, image_count, user_id, created_at FROM posts WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
@@ -46,7 +52,7 @@ func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.TextContent,
-		&i.ImageNumber,
+		&i.ImageCount,
 		&i.UserID,
 		&i.CreatedAt,
 	)
@@ -54,7 +60,7 @@ func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
 }
 
 const getPostsByUser = `-- name: GetPostsByUser :many
-SELECT id, text_content, image_number, user_id, created_at FROM posts
+SELECT id, text_content, image_count, user_id, created_at FROM posts
 WHERE user_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -78,7 +84,7 @@ func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.TextContent,
-			&i.ImageNumber,
+			&i.ImageCount,
 			&i.UserID,
 			&i.CreatedAt,
 		); err != nil {

@@ -22,6 +22,7 @@ func main() {
 	}
 
 	database := database.New(connection)
+
 	server, err := api.CreateServer(config, database)
 	if err != nil {
 		log.Fatal("error making a server: ", err)
