@@ -17,17 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: this is hard, i think i have to put text content in the query params and format body as form-data to process images.
-
-// TODO: i will keep my images in AWS S3 bucket naming them '<post_id>_<image_number>'
-// retreiving them with a for loop over the number of the images stored in the database
-
 // TODO: find some image processing library for compressing images
-
-// type CreatePostRequest struct {
-// 	TextContent  string   `json:"text_content" binding:"required,max=500"`
-// 	ImageContent []string `json:"image_content" binding:"max=5"`
-// }
 
 type CreatePostRequest struct {
 	ImageContent []*multipart.FileHeader `form:"image_content[]" binding:"required,max=5"`
@@ -54,16 +44,17 @@ func (server *Server) CreatePost(context *gin.Context) {
 		return
 	}
 
-	images := req.ImageContent
+	files := req.ImageContent
 
-	for _, image := range images {
+	for _, image := range files {
 		if !slices.Contains(supportedImageTypes, image.Header.Get("Content-Type")) {
 			context.AbortWithStatus(http.StatusUnsupportedMediaType)
 			return
 		}
 	}
 
-	for index, image := range images {
+	for index, image := range files {
+		// this is only for development, should delete in production
 		context.SaveUploadedFile(image, "images/"+image.Filename)
 		openedImage, err := image.Open()
 		if err != nil {
@@ -73,23 +64,25 @@ func (server *Server) CreatePost(context *gin.Context) {
 		imageNameSeparated := strings.Split(image.Filename, ".")
 		imageExtention := imageNameSeparated[len(imageNameSeparated)-1]
 		imageNameToSave := id.String() + "_" + strconv.Itoa(index) + "." + imageExtention
+
 		uploadedImage, err := server.uploader.Upload(context, &s3.PutObjectInput{
 			Bucket: aws.String("letscube"),
 			Key:    aws.String(imageNameToSave),
 			Body:   openedImage,
-			ACL:    "public-read",
 		})
 		if err != nil {
 			context.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
+
+		// this is only for development, should delete in production
 		fmt.Println(uploadedImage.Location)
 	}
 
 	arg := database.CreatePostParams{
 		ID:          id,
 		TextContent: req.TextContent,
-		ImageCount:  int32(len(images)),
+		ImageCount:  int32(len(files)),
 		UserID:      authorizationPayload.UserID,
 	}
 
