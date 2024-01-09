@@ -111,3 +111,79 @@ func (q *Queries) GetUsersByUsername(ctx context.Context, arg GetUsersByUsername
 	}
 	return items, nil
 }
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET username = $1, password_hash = $2
+WHERE id = $3
+RETURNING id, username, password_hash, profile_image, created_at
+`
+
+type UpdateUserParams struct {
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	ID           uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser, arg.Username, arg.PasswordHash, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.ProfileImage,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateUsersPassword = `-- name: UpdateUsersPassword :one
+UPDATE users
+SET password_hash = $1
+WHERE id = $2
+RETURNING id, username, password_hash, profile_image, created_at
+`
+
+type UpdateUsersPasswordParams struct {
+	PasswordHash string    `json:"password_hash"`
+	ID           uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUsersPassword(ctx context.Context, arg UpdateUsersPasswordParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUsersPassword, arg.PasswordHash, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.ProfileImage,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateUsersUsername = `-- name: UpdateUsersUsername :one
+UPDATE users
+SET username = $1
+WHERE id = $2
+RETURNING id, username, password_hash, profile_image, created_at
+`
+
+type UpdateUsersUsernameParams struct {
+	Username string    `json:"username"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUsersUsername(ctx context.Context, arg UpdateUsersUsernameParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUsersUsername, arg.Username, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.ProfileImage,
+		&i.CreatedAt,
+	)
+	return i, err
+}

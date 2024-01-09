@@ -2,7 +2,6 @@ CREATE TABLE users (
   id UUID PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(60) NOT NULL,
-  profile_image TEXT NOT NULL DEFAULT(''),
   created_at TIMESTAMPTZ NOT NULL DEFAULT(now())
 );
 

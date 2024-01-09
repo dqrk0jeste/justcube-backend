@@ -7,9 +7,11 @@ import (
 	"time"
 
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
+	"github.com/dqrk0jeste/letscube-backend/token"
 	"github.com/dqrk0jeste/letscube-backend/util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type userResponse struct {
@@ -29,8 +31,8 @@ func makeUserResponse(user database.User) userResponse {
 }
 
 type CreateUserRequest struct {
-	Username string `json:"username" binding:"required,printascii"`
-	Password string `json:"password" binding:"required,printascii"`
+	Username string `json:"username" binding:"required,printascii,min=1,max=20"`
+	Password string `json:"password" binding:"required,printascii,min=6,max=60"`
 }
 
 func (server *Server) createUser(context *gin.Context) {
@@ -60,6 +62,12 @@ func (server *Server) createUser(context *gin.Context) {
 
 	user, err := server.database.CreateUser(context, arg)
 	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == "unique_violation" {
+				context.JSON(http.StatusConflict, errorResponse(err))
+				return
+			}
+		}
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
@@ -174,6 +182,116 @@ func (server *Server) getUsersByUsername(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, res)
+}
+
+type UpdateUserRequest struct {
+	Username string `json:"username" binding:"printascii"`
+	Password string `json:"password" binding:"printascii"`
+}
+
+func (server *Server) updateUser(context *gin.Context) {
+	var req UpdateUserRequest
+	if err := context.ShouldBindJSON(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+	passwordHash, err := util.GeneratePasswordHash(req.Password)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := database.UpdateUserParams{
+		ID:           authorizationPayload.UserID,
+		Username:     req.Username,
+		PasswordHash: passwordHash,
+	}
+
+	user, err := server.database.UpdateUser(context, arg)
+	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == "unique_violation" {
+				context.JSON(http.StatusConflict, errorResponse(err))
+				return
+			}
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusOK, makeUserResponse(user))
+	return
+}
+
+type UpdateUsersUsernameRequest struct {
+	Username string `json:"username" binding:"required,printascii,min=1,max=20"`
+}
+
+func (server *Server) updateUsersUsername(context *gin.Context) {
+	var req UpdateUsersUsernameRequest
+	if err := context.ShouldBindJSON(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+	arg := database.UpdateUsersUsernameParams{
+		ID:       authorizationPayload.UserID,
+		Username: req.Username,
+	}
+
+	user, err := server.database.UpdateUsersUsername(context, arg)
+	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == "unique_violation" {
+				context.JSON(http.StatusConflict, errorResponse(err))
+				return
+			}
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusOK, makeUserResponse(user))
+	return
+}
+
+type UpdateUsersPasswordRequest struct {
+	Password string `json:"password" binding:"required,printascii,min=6,max=60"`
+}
+
+func (server *Server) updateUsersPassword(context *gin.Context) {
+	var req UpdateUsersPasswordRequest
+	if err := context.ShouldBindJSON(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+	passwordHash, err := util.GeneratePasswordHash(req.Password)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := database.UpdateUsersPasswordParams{
+		ID:           authorizationPayload.UserID,
+		PasswordHash: passwordHash,
+	}
+
+	user, err := server.database.UpdateUsersPassword(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusOK, makeUserResponse(user))
+	return
 }
 
 // type GetUserByUsernameRequest struct {

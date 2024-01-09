@@ -15,3 +15,21 @@ WHERE username LIKE @input
 ORDER BY username ASC
 LIMIT $1 OFFSET $2;
 
+-- name: UpdateUser :one
+UPDATE users
+SET username = $1, password_hash = $2
+WHERE id = $3
+RETURNING *;
+
+-- name: UpdateUsersUsername :one
+UPDATE users
+SET username = $1
+WHERE id = $2
+RETURNING *;
+
+-- name: UpdateUsersPassword :one
+UPDATE users
+SET password_hash = $1
+WHERE id = $2
+RETURNING *;
+

@@ -52,6 +52,9 @@ func (server *Server) addRouter() {
 	router.POST("/users", server.createUser)
 	router.POST("/users/login", server.loginUser)
 
+	router.PUT("/users/username", server.authMiddleware, server.updateUsersUsername)
+	router.PUT("/users/password", server.authMiddleware, server.updateUsersPassword)
+
 	router.GET("/users/:id", server.getUserById)
 	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
 
