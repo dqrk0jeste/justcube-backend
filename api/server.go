@@ -11,7 +11,7 @@ import (
 type Server struct {
 	config       util.Config
 	database     *database.Queries
-	tokenMaker   token.PasetoMaker
+	tokenMaker   *token.PasetoMaker
 	router       *gin.Engine
 	s3Controller *s3_bucket.S3Controller
 }
@@ -30,7 +30,7 @@ func CreateServer(config util.Config, database *database.Queries) (*Server, erro
 	server := &Server{
 		config:       config,
 		database:     database,
-		tokenMaker:   *tokenMaker,
+		tokenMaker:   tokenMaker,
 		s3Controller: s3Controller,
 	}
 
@@ -54,11 +54,15 @@ func (server *Server) addRouter() {
 	router.PUT("/users/username", server.authMiddleware, server.updateUsersUsername)
 	router.PUT("/users/password", server.authMiddleware, server.updateUsersPassword)
 
+	router.POST("/users/follow/:id", server.authMiddleware, server.FollowUser)
+	router.DELETE("/users/follow/:id", server.authMiddleware, server.UnfollowUser)
+
 	router.GET("/users/:id", server.getUserById)
 	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
 
 	router.POST("/posts", server.authMiddleware, server.CreatePost)
 	router.DELETE("/posts/:id", server.authMiddleware, server.DeletePost)
+
 	router.GET("/posts/:id", server.GetPostById)
 	router.GET("/posts", server.GetPostsByUser)
 

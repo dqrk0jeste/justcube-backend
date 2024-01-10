@@ -52,19 +52,13 @@ func (server *Server) CreatePost(context *gin.Context) {
 	}
 
 	for index, image := range files {
-		// this is only for development, should delete in production
-		context.SaveUploadedFile(image, "images/"+image.Filename)
-
 		imageNameToSave := id.String() + "_" + strconv.Itoa(index) + ".jpg"
 
-		uploadedImage, err := server.s3Controller.Upload(context, image, imageNameToSave)
+		_, err := server.s3Controller.Upload(context, image, imageNameToSave)
 		if err != nil {
 			context.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
 		}
-
-		// this is only for development, should delete in production
-		fmt.Println(uploadedImage.Location)
 	}
 
 	arg := database.CreatePostParams{
@@ -162,7 +156,7 @@ func (server *Server) GetPostById(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusCreated, post)
+	context.JSON(http.StatusOK, post)
 }
 
 type GetPostsByUserRequest struct {
@@ -197,5 +191,5 @@ func (server *Server) GetPostsByUser(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusCreated, posts)
+	context.JSON(http.StatusOK, posts)
 }

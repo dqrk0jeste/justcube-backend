@@ -22,10 +22,10 @@ CREATE TABLE messages (
 );
 
 CREATE TABLE follows (
-  id UUID PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users(id),
   followed_user_id UUID NOT NULL REFERENCES users(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT(now())
+  created_at TIMESTAMPTZ NOT NULL DEFAULT(now()),
+  PRIMARY KEY(user_id, followed_user_id)
 );
 
 CREATE INDEX ON users (id);

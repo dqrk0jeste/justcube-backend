@@ -11,7 +11,6 @@ import (
 )
 
 type Follow struct {
-	ID             uuid.UUID `json:"id"`
 	UserID         uuid.UUID `json:"user_id"`
 	FollowedUserID uuid.UUID `json:"followed_user_id"`
 	CreatedAt      time.Time `json:"created_at"`

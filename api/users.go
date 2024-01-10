@@ -182,48 +182,6 @@ func (server *Server) getUsersByUsername(context *gin.Context) {
 	context.JSON(http.StatusOK, res)
 }
 
-type UpdateUserRequest struct {
-	Username string `json:"username" binding:"printascii"`
-	Password string `json:"password" binding:"printascii"`
-}
-
-func (server *Server) updateUser(context *gin.Context) {
-	var req UpdateUserRequest
-	if err := context.ShouldBindJSON(&req); err != nil {
-		context.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
-	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
-
-	passwordHash, err := util.GeneratePasswordHash(req.Password)
-	if err != nil {
-		context.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	arg := database.UpdateUserParams{
-		ID:           authorizationPayload.UserID,
-		Username:     req.Username,
-		PasswordHash: passwordHash,
-	}
-
-	user, err := server.database.UpdateUser(context, arg)
-	if err != nil {
-		if err, ok := err.(*pq.Error); ok {
-			if err.Code.Name() == "unique_violation" {
-				context.JSON(http.StatusConflict, errorResponse(err))
-				return
-			}
-		}
-		context.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	context.JSON(http.StatusOK, makeUserResponse(user))
-	return
-}
-
 type UpdateUsersUsernameRequest struct {
 	Username string `json:"username" binding:"required,printascii,min=1,max=20"`
 }
@@ -312,4 +270,46 @@ func (server *Server) updateUsersPassword(context *gin.Context) {
 // 	}
 
 // 	context.JSON(http.StatusOK, makeUserResponse(user))
+// }
+
+// type UpdateUserRequest struct {
+// 	Username string `json:"username" binding:"printascii"`
+// 	Password string `json:"password" binding:"printascii"`
+// }
+
+// func (server *Server) updateUser(context *gin.Context) {
+// 	var req UpdateUserRequest
+// 	if err := context.ShouldBindJSON(&req); err != nil {
+// 		context.JSON(http.StatusBadRequest, errorResponse(err))
+// 		return
+// 	}
+
+// 	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+// 	passwordHash, err := util.GeneratePasswordHash(req.Password)
+// 	if err != nil {
+// 		context.JSON(http.StatusInternalServerError, errorResponse(err))
+// 		return
+// 	}
+
+// 	arg := database.UpdateUserParams{
+// 		ID:           authorizationPayload.UserID,
+// 		Username:     req.Username,
+// 		PasswordHash: passwordHash,
+// 	}
+
+// 	user, err := server.database.UpdateUser(context, arg)
+// 	if err != nil {
+// 		if err, ok := err.(*pq.Error); ok {
+// 			if err.Code.Name() == "unique_violation" {
+// 				context.JSON(http.StatusConflict, errorResponse(err))
+// 				return
+// 			}
+// 		}
+// 		context.JSON(http.StatusInternalServerError, errorResponse(err))
+// 		return
+// 	}
+
+// 	context.JSON(http.StatusOK, makeUserResponse(user))
+// 	return
 // }
