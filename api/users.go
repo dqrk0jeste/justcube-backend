@@ -15,18 +15,16 @@ import (
 )
 
 type userResponse struct {
-	ID           uuid.UUID `json:"id"`
-	Username     string    `json:"username"`
-	ProfileImage string    `json:"profile_image"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func makeUserResponse(user database.User) userResponse {
 	return userResponse{
-		ID:           user.ID,
-		Username:     user.Username,
-		ProfileImage: user.ProfileImage,
-		CreatedAt:    user.CreatedAt,
+		ID:        user.ID,
+		Username:  user.Username,
+		CreatedAt: user.CreatedAt,
 	}
 }
 
@@ -257,7 +255,6 @@ func (server *Server) updateUsersUsername(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, makeUserResponse(user))
-	return
 }
 
 type UpdateUsersPasswordRequest struct {
@@ -291,7 +288,6 @@ func (server *Server) updateUsersPassword(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, makeUserResponse(user))
-	return
 }
 
 // type GetUserByUsernameRequest struct {

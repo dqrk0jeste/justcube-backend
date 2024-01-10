@@ -37,6 +37,5 @@ type User struct {
 	ID           uuid.UUID `json:"id"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
-	ProfileImage string    `json:"profile_image"`
 	CreatedAt    time.Time `json:"created_at"`
 }

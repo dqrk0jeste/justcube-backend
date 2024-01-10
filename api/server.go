@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
 	"github.com/dqrk0jeste/letscube-backend/s3_bucket"
 	"github.com/dqrk0jeste/letscube-backend/token"
@@ -10,11 +9,11 @@ import (
 )
 
 type Server struct {
-	config     util.Config
-	database   *database.Queries
-	tokenMaker token.PasetoMaker
-	router     *gin.Engine
-	uploader   *manager.Uploader
+	config       util.Config
+	database     *database.Queries
+	tokenMaker   token.PasetoMaker
+	router       *gin.Engine
+	s3Controller *s3_bucket.S3Controller
 }
 
 func CreateServer(config util.Config, database *database.Queries) (*Server, error) {
@@ -23,16 +22,16 @@ func CreateServer(config util.Config, database *database.Queries) (*Server, erro
 		return nil, err
 	}
 
-	uploader, err := s3_bucket.UploaderMaker()
+	s3Controller, err := s3_bucket.ControllerMaker()
 	if err != nil {
 		return nil, err
 	}
 
 	server := &Server{
-		config:     config,
-		database:   database,
-		tokenMaker: *tokenMaker,
-		uploader:   uploader,
+		config:       config,
+		database:     database,
+		tokenMaker:   *tokenMaker,
+		s3Controller: s3Controller,
 	}
 
 	server.addRouter()
@@ -59,6 +58,7 @@ func (server *Server) addRouter() {
 	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
 
 	router.POST("/posts", server.authMiddleware, server.CreatePost)
+	router.DELETE("/posts/:id", server.authMiddleware, server.DeletePost)
 	router.GET("/posts/:id", server.GetPostById)
 	router.GET("/posts", server.GetPostsByUser)
 

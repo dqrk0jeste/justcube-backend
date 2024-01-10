@@ -14,7 +14,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users(id, username, password_hash)
 VALUES ($1, $2, $3)
-RETURNING id, username, password_hash, profile_image, created_at
+RETURNING id, username, password_hash, created_at
 `
 
 type CreateUserParams struct {
@@ -30,14 +30,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
-		&i.ProfileImage,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserById = `-- name: GetUserById :one
-SELECT id, username, password_hash, profile_image, created_at FROM users WHERE id = $1 LIMIT 1
+SELECT id, username, password_hash, created_at FROM users WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
@@ -47,14 +46,13 @@ func (q *Queries) GetUserById(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
-		&i.ProfileImage,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, profile_image, created_at FROM users WHERE username = $1 LIMIT 1
+SELECT id, username, password_hash, created_at FROM users WHERE username = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -64,14 +62,13 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
-		&i.ProfileImage,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUsersByUsername = `-- name: GetUsersByUsername :many
-SELECT id, username, password_hash, profile_image, created_at FROM users
+SELECT id, username, password_hash, created_at FROM users
 WHERE username LIKE $3
 ORDER BY username ASC
 LIMIT $1 OFFSET $2
@@ -96,7 +93,6 @@ func (q *Queries) GetUsersByUsername(ctx context.Context, arg GetUsersByUsername
 			&i.ID,
 			&i.Username,
 			&i.PasswordHash,
-			&i.ProfileImage,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -116,7 +112,7 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET username = $1, password_hash = $2
 WHERE id = $3
-RETURNING id, username, password_hash, profile_image, created_at
+RETURNING id, username, password_hash, created_at
 `
 
 type UpdateUserParams struct {
@@ -132,7 +128,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
-		&i.ProfileImage,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -142,7 +137,7 @@ const updateUsersPassword = `-- name: UpdateUsersPassword :one
 UPDATE users
 SET password_hash = $1
 WHERE id = $2
-RETURNING id, username, password_hash, profile_image, created_at
+RETURNING id, username, password_hash, created_at
 `
 
 type UpdateUsersPasswordParams struct {
@@ -157,7 +152,6 @@ func (q *Queries) UpdateUsersPassword(ctx context.Context, arg UpdateUsersPasswo
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
-		&i.ProfileImage,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -167,7 +161,7 @@ const updateUsersUsername = `-- name: UpdateUsersUsername :one
 UPDATE users
 SET username = $1
 WHERE id = $2
-RETURNING id, username, password_hash, profile_image, created_at
+RETURNING id, username, password_hash, created_at
 `
 
 type UpdateUsersUsernameParams struct {
@@ -182,7 +176,6 @@ func (q *Queries) UpdateUsersUsername(ctx context.Context, arg UpdateUsersUserna
 		&i.ID,
 		&i.Username,
 		&i.PasswordHash,
-		&i.ProfileImage,
 		&i.CreatedAt,
 	)
 	return i, err

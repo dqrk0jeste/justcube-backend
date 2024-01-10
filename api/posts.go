@@ -7,10 +7,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
-	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
 	"github.com/dqrk0jeste/letscube-backend/token"
 	"github.com/gin-gonic/gin"
@@ -18,13 +15,14 @@ import (
 )
 
 // TODO: find some image processing library for compressing images
+// TODO: convert every image to jpeg format, for ease of access
 
 type CreatePostRequest struct {
 	ImageContent []*multipart.FileHeader `form:"image_content[]" binding:"required,max=5"`
 	TextContent  string                  `form:"text_content" binding:"required,max=500"`
 }
 
-var supportedImageTypes = []string{
+var SupportedImageTypes = []string{
 	"image/jpeg",
 	"image/png",
 }
@@ -47,7 +45,7 @@ func (server *Server) CreatePost(context *gin.Context) {
 	files := req.ImageContent
 
 	for _, image := range files {
-		if !slices.Contains(supportedImageTypes, image.Header.Get("Content-Type")) {
+		if !slices.Contains(SupportedImageTypes, image.Header.Get("Content-Type")) {
 			context.AbortWithStatus(http.StatusUnsupportedMediaType)
 			return
 		}
@@ -56,20 +54,10 @@ func (server *Server) CreatePost(context *gin.Context) {
 	for index, image := range files {
 		// this is only for development, should delete in production
 		context.SaveUploadedFile(image, "images/"+image.Filename)
-		openedImage, err := image.Open()
-		if err != nil {
-			context.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
-		}
-		imageNameSeparated := strings.Split(image.Filename, ".")
-		imageExtention := imageNameSeparated[len(imageNameSeparated)-1]
-		imageNameToSave := id.String() + "_" + strconv.Itoa(index) + "." + imageExtention
 
-		uploadedImage, err := server.uploader.Upload(context, &s3.PutObjectInput{
-			Bucket: aws.String("letscube"),
-			Key:    aws.String(imageNameToSave),
-			Body:   openedImage,
-		})
+		imageNameToSave := id.String() + "_" + strconv.Itoa(index) + ".jpg"
+
+		uploadedImage, err := server.s3Controller.Upload(context, image, imageNameToSave)
 		if err != nil {
 			context.JSON(http.StatusInternalServerError, errorResponse(err))
 			return
@@ -93,6 +81,56 @@ func (server *Server) CreatePost(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusCreated, post)
+}
+
+type DeletePostRequest struct {
+	ID string `uri:"id" binding:"required,uuid"`
+}
+
+func (server *Server) DeletePost(context *gin.Context) {
+	var req DeletePostRequest
+	if err := context.ShouldBindUri(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+	id, err := uuid.Parse(req.ID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	post, err := server.database.GetPostById(context, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			context.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if post.UserID != authorizationPayload.UserID {
+		context.Status(http.StatusForbidden)
+		return
+	}
+
+	err = server.database.DeletePost(context, id)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	for i := 0; i < int(post.ImageCount); i++ {
+		err := server.s3Controller.Delete(context, id.String()+"_"+strconv.Itoa(i)+".jpg")
+		if err != nil {
+			fmt.Printf("there has been an error deleting image number %d\n", i)
+		}
+	}
+
+	context.Status(http.StatusOK)
 }
 
 type GetPostByIdRequest struct {
