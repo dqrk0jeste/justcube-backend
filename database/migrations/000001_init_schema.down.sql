@@ -1,3 +1,4 @@
+DROP TABLE comments;
 DROP TABLE posts;
 DROP TABLE messages;
 DROP TABLE follows;

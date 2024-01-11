@@ -13,6 +13,14 @@ CREATE TABLE posts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT(now())
 );
 
+CREATE TABLE comments (
+  id UUID PRIMARY KEY,
+  content VARCHAR(200) NOT NULL,
+  user_id UUID NOT NULL REFERENCES users(id),
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT(now())
+);
+
 CREATE TABLE messages (
   id UUID PRIMARY KEY,
   content VARCHAR(500) NOT NULL,
@@ -30,6 +38,7 @@ CREATE TABLE follows (
 
 CREATE INDEX ON users (id);
 CREATE INDEX ON posts (id);
+CREATE INDEX ON comments (post_id);
 CREATE INDEX ON messages (from_user_id);
 CREATE INDEX ON messages (to_user_id);
 CREATE INDEX ON messages (from_user_id, to_user_id);

@@ -10,6 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type Comment struct {
+	ID        uuid.UUID `json:"id"`
+	Content   string    `json:"content"`
+	UserID    uuid.UUID `json:"user_id"`
+	PostID    uuid.UUID `json:"post_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Follow struct {
 	UserID         uuid.UUID `json:"user_id"`
 	FollowedUserID uuid.UUID `json:"followed_user_id"`

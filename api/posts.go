@@ -12,10 +12,8 @@ import (
 	"github.com/dqrk0jeste/letscube-backend/token"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
-
-// TODO: find some image processing library for compressing images
-// TODO: convert every image to jpeg format, for ease of access
 
 type CreatePostRequest struct {
 	ImageContent []*multipart.FileHeader `form:"image_content[]" binding:"required,max=5"`
@@ -27,7 +25,7 @@ var SupportedImageTypes = []string{
 	"image/png",
 }
 
-func (server *Server) CreatePost(context *gin.Context) {
+func (server *Server) createPost(context *gin.Context) {
 	var req CreatePostRequest
 	if err := context.ShouldBind(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -81,7 +79,7 @@ type DeletePostRequest struct {
 	ID string `uri:"id" binding:"required,uuid"`
 }
 
-func (server *Server) DeletePost(context *gin.Context) {
+func (server *Server) deletePost(context *gin.Context) {
 	var req DeletePostRequest
 	if err := context.ShouldBindUri(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -132,7 +130,7 @@ type GetPostByIdRequest struct {
 }
 
 // in the future, we will have public and private accounts so we will have to check if user that requested the post follows user whose post it is
-func (server *Server) GetPostById(context *gin.Context) {
+func (server *Server) getPostById(context *gin.Context) {
 
 	var req GetPostByIdRequest
 	if err := context.ShouldBindUri(&req); err != nil {
@@ -165,8 +163,7 @@ type GetPostsByUserRequest struct {
 	PageSize int32  `form:"page_size" binding:"required,max=20"`
 }
 
-func (server *Server) GetPostsByUser(context *gin.Context) {
-
+func (server *Server) getPostsByUser(context *gin.Context) {
 	var req GetPostsByUserRequest
 	if err := context.ShouldBindQuery(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -192,4 +189,97 @@ func (server *Server) GetPostsByUser(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, posts)
+}
+
+type PostCommentRequest struct {
+	PostID  string `json:"post_id" binding:"required,uuid"`
+	Content string `json:"content" binding:"required,max=200"`
+}
+
+func (server *Server) sendComment(context *gin.Context) {
+	var req PostCommentRequest
+	if err := context.ShouldBindJSON(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	postID, err := uuid.Parse(req.PostID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+	userID := authorizationPayload.UserID
+
+	id, err := uuid.NewRandom()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := database.SendCommentParams{
+		ID:      id,
+		UserID:  userID,
+		PostID:  postID,
+		Content: req.Content,
+	}
+
+	comment, err := server.database.SendComment(context, arg)
+	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == "foreign_key_violation" {
+				context.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusCreated, comment)
+}
+
+type DeleteCommentRequest struct {
+	ID string `uri:"id" binding:"required,uuid"`
+}
+
+func (server *Server) deleteComment(context *gin.Context) {
+	var req DeleteCommentRequest
+	if err := context.ShouldBindUri(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	id, err := uuid.Parse(req.ID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+	userID := authorizationPayload.UserID
+
+	comment, err := server.database.GetCommentById(context, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			context.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if userID != comment.UserID {
+		context.Status(http.StatusForbidden)
+		return
+	}
+
+	err = server.database.DeleteComment(context, id)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.Status(http.StatusOK)
 }

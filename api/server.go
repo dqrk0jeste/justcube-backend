@@ -66,11 +66,14 @@ func (server *Server) addRouter() {
 	router.GET("/users/:id", server.getUserById)
 	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
 
-	router.POST("/posts", server.authMiddleware, server.CreatePost)
-	router.DELETE("/posts/:id", server.authMiddleware, server.DeletePost)
+	router.POST("/posts", server.authMiddleware, server.createPost)
+	router.DELETE("/posts/:id", server.authMiddleware, server.deletePost)
 
-	router.GET("/posts/:id", server.GetPostById)
-	router.GET("/posts", server.GetPostsByUser)
+	router.POST("/posts/comments", server.authMiddleware, server.sendComment)
+	router.DELETE("/posts/comments/:id", server.authMiddleware, server.deleteComment)
+
+	router.GET("/posts/:id", server.getPostById)
+	router.GET("/posts", server.getPostsByUser)
 
 	server.router = router
 }
