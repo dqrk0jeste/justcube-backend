@@ -149,7 +149,7 @@ func (server *Server) getUserById(context *gin.Context) {
 }
 
 type GetUsersByUsernameRequest struct {
-	Page     int32  `form:"page_number" binding:"required"`
+	Page     int32  `form:"page_number" binding:"required,min=1"`
 	PageSize int32  `form:"page_size" binding:"required,min=1,max=20"`
 	Input    string `form:"input" binding:"required,min=3,printascii"`
 }

@@ -14,7 +14,7 @@ type FollowUserRequest struct {
 	FollowedUserID string `uri:"id" binding:"required,uuid"`
 }
 
-func (server *Server) FollowUser(context *gin.Context) {
+func (server *Server) followUser(context *gin.Context) {
 	var req FollowUserRequest
 	if err := context.ShouldBindUri(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -28,6 +28,11 @@ func (server *Server) FollowUser(context *gin.Context) {
 	}
 
 	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+	if authorizationPayload.UserID == followedUserID {
+		context.Status(http.StatusBadRequest)
+		return
+	}
 
 	arg := database.FollowUserParams{
 		FollowedUserID: followedUserID,
@@ -61,7 +66,7 @@ type UnfollowUserRequest struct {
 	FollowedUserID string `uri:"id" binding:"required,uuid"`
 }
 
-func (server *Server) UnfollowUser(context *gin.Context) {
+func (server *Server) unfollowUser(context *gin.Context) {
 	var req UnfollowUserRequest
 	if err := context.ShouldBindUri(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -88,4 +93,84 @@ func (server *Server) UnfollowUser(context *gin.Context) {
 	}
 
 	context.Status(http.StatusOK)
+}
+
+type GetFollowersRequest struct {
+	Page     int32  `form:"page_number" binding:"required,min=1"`
+	PageSize int32  `form:"page_size" binding:"required,min=1,max=20"`
+	UserID   string `form:"user_id" binding:"required,uuid"`
+}
+
+func (server *Server) getFollowers(context *gin.Context) {
+	var req GetFollowersRequest
+	if err := context.ShouldBindQuery(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := database.GetFollowersParams{
+		FollowedUserID: userID,
+		Offset:         (req.Page - 1) * req.PageSize,
+		Limit:          req.PageSize,
+	}
+
+	following, err := server.database.GetFollowers(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	res := make([]userResponse, 0)
+
+	for _, user := range following {
+		res = append(res, makeUserResponse(user))
+	}
+
+	context.JSON(http.StatusOK, res)
+}
+
+type GetFollowingRequest struct {
+	Page     int32  `form:"page_number" binding:"required,min=1"`
+	PageSize int32  `form:"page_size" binding:"required,min=1,max=20"`
+	UserID   string `form:"user_id" binding:"required,uuid"`
+}
+
+func (server *Server) getFollowing(context *gin.Context) {
+	var req GetFollowingRequest
+	if err := context.ShouldBindQuery(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := database.GetFollowingParams{
+		UserID: userID,
+		Offset: (req.Page - 1) * req.PageSize,
+		Limit:  req.PageSize,
+	}
+
+	followers, err := server.database.GetFollowing(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	res := make([]userResponse, 0)
+
+	for _, user := range followers {
+		res = append(res, makeUserResponse(user))
+	}
+
+	context.JSON(http.StatusOK, res)
 }

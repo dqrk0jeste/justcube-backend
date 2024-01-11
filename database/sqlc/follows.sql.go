@@ -7,7 +7,6 @@ package database
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -30,50 +29,34 @@ func (q *Queries) FollowUser(ctx context.Context, arg FollowUserParams) (Follow,
 	return i, err
 }
 
-const getFollowing = `-- name: GetFollowing :many
-SELECT user_id, followed_user_id, follows.created_at, followed_users.id, followed_users.username, followed_users.password_hash, followed_users.created_at, following_users.id, following_users.username, following_users.password_hash, following_users.created_at, count(user_id) FROM follows
-INNER JOIN users as followed_users on follows.followed_user_id = users.id
-INNER JOIN users as following_users on follows.user_id = users.id
-WHERE follows.user_id = $1
+const getFollowers = `-- name: GetFollowers :many
+SELECT following_users.id, following_users.username, following_users.password_hash, following_users.created_at FROM follows
+INNER JOIN users as followed_users on follows.followed_user_id = followed_users.id
+INNER JOIN users as following_users on follows.user_id = following_users.id
+WHERE follows.followed_user_id = $1
+LIMIT $2 OFFSET $3
 `
 
-type GetFollowingRow struct {
-	UserID         uuid.UUID `json:"user_id"`
+type GetFollowersParams struct {
 	FollowedUserID uuid.UUID `json:"followed_user_id"`
-	CreatedAt      time.Time `json:"created_at"`
-	ID             uuid.UUID `json:"id"`
-	Username       string    `json:"username"`
-	PasswordHash   string    `json:"password_hash"`
-	CreatedAt_2    time.Time `json:"created_at_2"`
-	ID_2           uuid.UUID `json:"id_2"`
-	Username_2     string    `json:"username_2"`
-	PasswordHash_2 string    `json:"password_hash_2"`
-	CreatedAt_3    time.Time `json:"created_at_3"`
-	Count          int64     `json:"count"`
+	Limit          int32     `json:"limit"`
+	Offset         int32     `json:"offset"`
 }
 
-func (q *Queries) GetFollowing(ctx context.Context, userID uuid.UUID) ([]GetFollowingRow, error) {
-	rows, err := q.db.QueryContext(ctx, getFollowing, userID)
+func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowers, arg.FollowedUserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetFollowingRow{}
+	items := []User{}
 	for rows.Next() {
-		var i GetFollowingRow
+		var i User
 		if err := rows.Scan(
-			&i.UserID,
-			&i.FollowedUserID,
-			&i.CreatedAt,
 			&i.ID,
 			&i.Username,
 			&i.PasswordHash,
-			&i.CreatedAt_2,
-			&i.ID_2,
-			&i.Username_2,
-			&i.PasswordHash_2,
-			&i.CreatedAt_3,
-			&i.Count,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -88,50 +71,34 @@ func (q *Queries) GetFollowing(ctx context.Context, userID uuid.UUID) ([]GetFoll
 	return items, nil
 }
 
-const getFollows = `-- name: GetFollows :many
-SELECT user_id, followed_user_id, follows.created_at, followed_users.id, followed_users.username, followed_users.password_hash, followed_users.created_at, following_users.id, following_users.username, following_users.password_hash, following_users.created_at, count(followed_user_id) FROM follows
-INNER JOIN users as followed_users on follows.followed_user_id = users.id
-INNER JOIN users as following_users on follows.user_id = users.id
-WHERE follows.followed_user_id = $1
+const getFollowing = `-- name: GetFollowing :many
+SELECT followed_users.id, followed_users.username, followed_users.password_hash, followed_users.created_at FROM follows
+INNER JOIN users as followed_users on follows.followed_user_id = followed_users.id
+INNER JOIN users as following_users on follows.user_id = following_users.id
+WHERE follows.user_id = $1
+LIMIT $2 OFFSET $3
 `
 
-type GetFollowsRow struct {
-	UserID         uuid.UUID `json:"user_id"`
-	FollowedUserID uuid.UUID `json:"followed_user_id"`
-	CreatedAt      time.Time `json:"created_at"`
-	ID             uuid.UUID `json:"id"`
-	Username       string    `json:"username"`
-	PasswordHash   string    `json:"password_hash"`
-	CreatedAt_2    time.Time `json:"created_at_2"`
-	ID_2           uuid.UUID `json:"id_2"`
-	Username_2     string    `json:"username_2"`
-	PasswordHash_2 string    `json:"password_hash_2"`
-	CreatedAt_3    time.Time `json:"created_at_3"`
-	Count          int64     `json:"count"`
+type GetFollowingParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) GetFollows(ctx context.Context, followedUserID uuid.UUID) ([]GetFollowsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getFollows, followedUserID)
+func (q *Queries) GetFollowing(ctx context.Context, arg GetFollowingParams) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowing, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetFollowsRow{}
+	items := []User{}
 	for rows.Next() {
-		var i GetFollowsRow
+		var i User
 		if err := rows.Scan(
-			&i.UserID,
-			&i.FollowedUserID,
-			&i.CreatedAt,
 			&i.ID,
 			&i.Username,
 			&i.PasswordHash,
-			&i.CreatedAt_2,
-			&i.ID_2,
-			&i.Username_2,
-			&i.PasswordHash_2,
-			&i.CreatedAt_3,
-			&i.Count,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

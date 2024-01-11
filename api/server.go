@@ -54,8 +54,11 @@ func (server *Server) addRouter() {
 	router.PUT("/users/username", server.authMiddleware, server.updateUsersUsername)
 	router.PUT("/users/password", server.authMiddleware, server.updateUsersPassword)
 
-	router.POST("/users/follow/:id", server.authMiddleware, server.FollowUser)
-	router.DELETE("/users/follow/:id", server.authMiddleware, server.UnfollowUser)
+	router.POST("/users/follow/:id", server.authMiddleware, server.followUser)
+	router.DELETE("/users/follow/:id", server.authMiddleware, server.unfollowUser)
+
+	router.GET("/users/followers", server.getFollowers)
+	router.GET("/users/following", server.getFollowing)
 
 	router.GET("/users/:id", server.getUserById)
 	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
