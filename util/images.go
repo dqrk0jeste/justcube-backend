@@ -5,22 +5,11 @@ import (
 	"image"
 	"image/jpeg"
 	_ "image/png"
-	"io"
 	"mime/multipart"
 )
 
-func ConvertToJPEG(imageToConvert *multipart.FileHeader) (io.Reader, error) {
-	openedImage, err := imageToConvert.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer openedImage.Close()
-
-	if imageToConvert.Header.Get("Content-Type") == "image/jpeg" {
-		return openedImage, nil
-	}
-
-	originalImage, _, err := image.Decode(openedImage)
+func ConvertToJPEG(imageToConvert *multipart.File) (*bytes.Buffer, error) {
+	originalImage, _, err := image.Decode(*imageToConvert)
 	if err != nil {
 		return nil, err
 	}

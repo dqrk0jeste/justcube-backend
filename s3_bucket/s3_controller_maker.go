@@ -2,6 +2,7 @@ package s3_bucket
 
 import (
 	"context"
+	"io"
 	"mime/multipart"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -34,15 +35,27 @@ func ControllerMaker() (*S3Controller, error) {
 }
 
 func (controller *S3Controller) Upload(context context.Context, file *multipart.FileHeader, nameToSaveAs string) (*manager.UploadOutput, error) {
-	jpegImage, err := util.ConvertToJPEG(file)
+	openedImage, err := file.Open()
 	if err != nil {
 		return nil, err
+	}
+	defer openedImage.Close()
+
+	var imageToSave io.Reader
+	if file.Header.Get("Content-Type") == "image/jpeg" {
+		imageToSave = openedImage
+	} else {
+		jpegImage, err := util.ConvertToJPEG(&openedImage)
+		if err != nil {
+			return nil, err
+		}
+		imageToSave = jpegImage
 	}
 
 	uploadedFile, err := controller.uploader.Upload(context, &s3.PutObjectInput{
 		Bucket: aws.String("letscube"),
 		Key:    aws.String(nameToSaveAs),
-		Body:   jpegImage,
+		Body:   imageToSave,
 	})
 	if err != nil {
 		return nil, err
