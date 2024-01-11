@@ -120,7 +120,7 @@ func (server *Server) getFollowers(context *gin.Context) {
 		Limit:          req.PageSize,
 	}
 
-	following, err := server.database.GetFollowers(context, arg)
+	followers, err := server.database.GetFollowers(context, arg)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -128,7 +128,7 @@ func (server *Server) getFollowers(context *gin.Context) {
 
 	res := make([]userResponse, 0)
 
-	for _, user := range following {
+	for _, user := range followers {
 		res = append(res, makeUserResponse(user))
 	}
 
@@ -160,7 +160,7 @@ func (server *Server) getFollowing(context *gin.Context) {
 		Limit:  req.PageSize,
 	}
 
-	followers, err := server.database.GetFollowing(context, arg)
+	following, err := server.database.GetFollowing(context, arg)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -168,9 +168,65 @@ func (server *Server) getFollowing(context *gin.Context) {
 
 	res := make([]userResponse, 0)
 
-	for _, user := range followers {
+	for _, user := range following {
 		res = append(res, makeUserResponse(user))
 	}
 
 	context.JSON(http.StatusOK, res)
+}
+
+type GetFollowersCountRequest struct {
+	UserID string `uri:"id" binding:"required,uuid"`
+}
+
+func (server *Server) getFollowersCount(context *gin.Context) {
+	var req GetFollowersCountRequest
+	if err := context.ShouldBindUri(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	followersCount, err := server.database.GetFollowersCount(context, userID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{
+		"followers_count": followersCount,
+	})
+}
+
+type GetFollowingCountRequest struct {
+	UserID string `uri:"id" binding:"required,uuid"`
+}
+
+func (server *Server) getFollowingCount(context *gin.Context) {
+	var req GetFollowingCountRequest
+	if err := context.ShouldBindUri(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	followingCount, err := server.database.GetFollowingCount(context, userID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{
+		"following_count": followingCount,
+	})
 }

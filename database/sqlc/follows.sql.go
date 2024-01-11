@@ -71,6 +71,17 @@ func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]U
 	return items, nil
 }
 
+const getFollowersCount = `-- name: GetFollowersCount :one
+SELECT count(followed_user_id) FROM follows WHERE followed_user_id = $1
+`
+
+func (q *Queries) GetFollowersCount(ctx context.Context, followedUserID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFollowersCount, followedUserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getFollowing = `-- name: GetFollowing :many
 SELECT followed_users.id, followed_users.username, followed_users.password_hash, followed_users.created_at FROM follows
 INNER JOIN users as followed_users on follows.followed_user_id = followed_users.id
@@ -111,6 +122,17 @@ func (q *Queries) GetFollowing(ctx context.Context, arg GetFollowingParams) ([]U
 		return nil, err
 	}
 	return items, nil
+}
+
+const getFollowingCount = `-- name: GetFollowingCount :one
+SELECT count(user_id) FROM follows WHERE user_id = $1
+`
+
+func (q *Queries) GetFollowingCount(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFollowingCount, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const unfollowUser = `-- name: UnfollowUser :exec

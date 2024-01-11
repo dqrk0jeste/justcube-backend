@@ -20,3 +20,9 @@ LIMIT $2 OFFSET $3;
 -- name: UnfollowUser :exec
 DELETE FROM follows WHERE user_id = $1 AND followed_user_id = $2;
 
+-- name: GetFollowingCount :one
+SELECT count(user_id) FROM follows WHERE user_id = $1;
+
+-- name: GetFollowersCount :one
+SELECT count(followed_user_id) FROM follows WHERE followed_user_id = $1;
+
