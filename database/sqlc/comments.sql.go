@@ -7,16 +7,26 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const deleteComment = `-- name: DeleteComment :exec
-DELETE FROM COMMENTS WHERE id = $1
+DELETE FROM comments WHERE id = $1
 `
 
 func (q *Queries) DeleteComment(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteComment, id)
+	return err
+}
+
+const deleteReply = `-- name: DeleteReply :exec
+DELETE FROM replies WHERE id = $1
+`
+
+func (q *Queries) DeleteReply(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteReply, id)
 	return err
 }
 
@@ -38,9 +48,12 @@ func (q *Queries) GetCommentById(ctx context.Context, id uuid.UUID) (Comment, er
 }
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
-SELECT id, content, user_id, post_id, created_at FROM comments
+SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, COUNT(replies.id) as number_of_replies
+FROM comments
+LEFT JOIN replies ON replies.comment_id = comments.id
 WHERE post_id = $1
-ORDER BY created_at DESC
+GROUP BY comments.id
+ORDER BY number_of_replies DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -50,20 +63,72 @@ type GetCommentsByPostParams struct {
 	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostParams) ([]Comment, error) {
+type GetCommentsByPostRow struct {
+	ID              uuid.UUID `json:"id"`
+	Content         string    `json:"content"`
+	UserID          uuid.UUID `json:"user_id"`
+	PostID          uuid.UUID `json:"post_id"`
+	CreatedAt       time.Time `json:"created_at"`
+	NumberOfReplies int64     `json:"number_of_replies"`
+}
+
+func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostParams) ([]GetCommentsByPostRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCommentsByPost, arg.PostID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Comment{}
+	items := []GetCommentsByPostRow{}
 	for rows.Next() {
-		var i Comment
+		var i GetCommentsByPostRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Content,
 			&i.UserID,
 			&i.PostID,
+			&i.CreatedAt,
+			&i.NumberOfReplies,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRepliesByComment = `-- name: GetRepliesByComment :many
+SELECT id, content, user_id, comment_id, created_at FROM replies
+WHERE comment_id = $1
+ORDER BY created_at ASC
+LIMIT $2 OFFSET $3
+`
+
+type GetRepliesByCommentParams struct {
+	CommentID uuid.UUID `json:"comment_id"`
+	Limit     int32     `json:"limit"`
+	Offset    int32     `json:"offset"`
+}
+
+func (q *Queries) GetRepliesByComment(ctx context.Context, arg GetRepliesByCommentParams) ([]Reply, error) {
+	rows, err := q.db.QueryContext(ctx, getRepliesByComment, arg.CommentID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Reply{}
+	for rows.Next() {
+		var i Reply
+		if err := rows.Scan(
+			&i.ID,
+			&i.Content,
+			&i.UserID,
+			&i.CommentID,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -79,21 +144,38 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostPa
 	return items, nil
 }
 
-const sendComment = `-- name: SendComment :one
+const getReplyById = `-- name: GetReplyById :one
+SELECT id, content, user_id, comment_id, created_at FROM replies WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetReplyById(ctx context.Context, id uuid.UUID) (Reply, error) {
+	row := q.db.QueryRowContext(ctx, getReplyById, id)
+	var i Reply
+	err := row.Scan(
+		&i.ID,
+		&i.Content,
+		&i.UserID,
+		&i.CommentID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const postComment = `-- name: PostComment :one
 INSERT INTO comments(id, content, user_id, post_id)
 VALUES ($1, $2, $3, $4)
 RETURNING id, content, user_id, post_id, created_at
 `
 
-type SendCommentParams struct {
+type PostCommentParams struct {
 	ID      uuid.UUID `json:"id"`
 	Content string    `json:"content"`
 	UserID  uuid.UUID `json:"user_id"`
 	PostID  uuid.UUID `json:"post_id"`
 }
 
-func (q *Queries) SendComment(ctx context.Context, arg SendCommentParams) (Comment, error) {
-	row := q.db.QueryRowContext(ctx, sendComment,
+func (q *Queries) PostComment(ctx context.Context, arg PostCommentParams) (Comment, error) {
+	row := q.db.QueryRowContext(ctx, postComment,
 		arg.ID,
 		arg.Content,
 		arg.UserID,
@@ -105,6 +187,37 @@ func (q *Queries) SendComment(ctx context.Context, arg SendCommentParams) (Comme
 		&i.Content,
 		&i.UserID,
 		&i.PostID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const postReply = `-- name: PostReply :one
+INSERT INTO replies(id, content, user_id, comment_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, content, user_id, comment_id, created_at
+`
+
+type PostReplyParams struct {
+	ID        uuid.UUID `json:"id"`
+	Content   string    `json:"content"`
+	UserID    uuid.UUID `json:"user_id"`
+	CommentID uuid.UUID `json:"comment_id"`
+}
+
+func (q *Queries) PostReply(ctx context.Context, arg PostReplyParams) (Reply, error) {
+	row := q.db.QueryRowContext(ctx, postReply,
+		arg.ID,
+		arg.Content,
+		arg.UserID,
+		arg.CommentID,
+	)
+	var i Reply
+	err := row.Scan(
+		&i.ID,
+		&i.Content,
+		&i.UserID,
+		&i.CommentID,
 		&i.CreatedAt,
 	)
 	return i, err

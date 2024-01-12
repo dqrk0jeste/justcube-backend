@@ -196,7 +196,7 @@ type PostCommentRequest struct {
 	Content string `json:"content" binding:"required,max=200"`
 }
 
-func (server *Server) sendComment(context *gin.Context) {
+func (server *Server) postComment(context *gin.Context) {
 	var req PostCommentRequest
 	if err := context.ShouldBindJSON(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -218,14 +218,14 @@ func (server *Server) sendComment(context *gin.Context) {
 		return
 	}
 
-	arg := database.SendCommentParams{
+	arg := database.PostCommentParams{
 		ID:      id,
 		UserID:  userID,
 		PostID:  postID,
 		Content: req.Content,
 	}
 
-	comment, err := server.database.SendComment(context, arg)
+	comment, err := server.database.PostComment(context, arg)
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code.Name() == "foreign_key_violation" {
@@ -241,7 +241,7 @@ func (server *Server) sendComment(context *gin.Context) {
 }
 
 type DeleteCommentRequest struct {
-	ID string `uri:"id" binding:"required,uuid"`
+	PostID string `uri:"id" binding:"required,uuid"`
 }
 
 func (server *Server) deleteComment(context *gin.Context) {
@@ -251,7 +251,7 @@ func (server *Server) deleteComment(context *gin.Context) {
 		return
 	}
 
-	id, err := uuid.Parse(req.ID)
+	id, err := uuid.Parse(req.PostID)
 	if err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -315,4 +315,130 @@ func (server *Server) getComments(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, comments)
+}
+
+type PostReplyRequest struct {
+	CommentID string `json:"comment_id" binding:"required,uuid"`
+	Content   string `json:"content" binding:"required,max=200"`
+}
+
+func (server *Server) postReply(context *gin.Context) {
+	var req PostReplyRequest
+	if err := context.ShouldBindJSON(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	postID, err := uuid.Parse(req.CommentID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+	userID := authorizationPayload.UserID
+
+	id, err := uuid.NewRandom()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := database.PostReplyParams{
+		ID:        id,
+		UserID:    userID,
+		CommentID: postID,
+		Content:   req.Content,
+	}
+
+	reply, err := server.database.PostReply(context, arg)
+	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == "foreign_key_violation" {
+				context.JSON(http.StatusNotFound, errorResponse(err))
+				return
+			}
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.JSON(http.StatusCreated, reply)
+}
+
+type DeleteReplyRequest struct {
+	ReplyID string `uri:"id" binding:"required,uuid"`
+}
+
+func (server *Server) deleteReply(context *gin.Context) {
+	var req DeleteReplyRequest
+	if err := context.ShouldBindUri(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	id, err := uuid.Parse(req.ReplyID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+	userID := authorizationPayload.UserID
+
+	reply, err := server.database.GetReplyById(context, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			context.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if userID != reply.UserID {
+		context.Status(http.StatusForbidden)
+		return
+	}
+
+	err = server.database.DeleteReply(context, id)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	context.Status(http.StatusOK)
+}
+
+type GetRepliesRequest struct {
+	CommentID string `form:"comment_id" binding:"required,uuid"`
+	Page      int32  `form:"page_number" binding:"required,min=1"`
+	PageSize  int32  `form:"page_size" binding:"required,min=1,max=20"`
+}
+
+func (server *Server) getReplies(context *gin.Context) {
+	var req GetRepliesRequest
+	if err := context.ShouldBindQuery(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	commentID, err := uuid.Parse(req.CommentID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := database.GetRepliesByCommentParams{
+		CommentID: commentID,
+		Limit:     req.PageSize,
+		Offset:    (req.Page - 1) * req.PageSize,
+	}
+
+	replies, err := server.database.GetRepliesByComment(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+	}
+
+	context.JSON(http.StatusOK, replies)
 }

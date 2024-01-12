@@ -21,6 +21,14 @@ CREATE TABLE comments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT(now())
 );
 
+CREATE TABLE replies (
+  id UUID PRIMARY KEY,
+  content VARCHAR(200) NOT NULL,
+  user_id UUID NOT NULL REFERENCES users(id),
+  comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT(now())
+);
+
 CREATE TABLE messages (
   id UUID PRIMARY KEY,
   content VARCHAR(500) NOT NULL,

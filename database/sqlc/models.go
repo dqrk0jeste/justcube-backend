@@ -40,6 +40,14 @@ type Post struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Reply struct {
+	ID        uuid.UUID `json:"id"`
+	Content   string    `json:"content"`
+	UserID    uuid.UUID `json:"user_id"`
+	CommentID uuid.UUID `json:"comment_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type User struct {
 	ID           uuid.UUID `json:"id"`
 	Username     string    `json:"username"`
