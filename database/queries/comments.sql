@@ -8,3 +8,9 @@ DELETE FROM COMMENTS WHERE id = $1;
 
 -- name: GetCommentById :one
 SELECT * FROM comments WHERE id = $1 LIMIT 1;
+
+-- name: GetCommentsByPost :many
+SELECT * FROM comments
+WHERE post_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;

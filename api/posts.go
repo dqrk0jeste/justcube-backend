@@ -283,3 +283,36 @@ func (server *Server) deleteComment(context *gin.Context) {
 
 	context.Status(http.StatusOK)
 }
+
+type GetCommentsRequest struct {
+	PostID   string `form:"post_id" binding:"required,uuid"`
+	Page     int32  `form:"page_number" binding:"required,min=1"`
+	PageSize int32  `form:"page_size" binding:"required,min=1,max=20"`
+}
+
+func (server *Server) getComments(context *gin.Context) {
+	var req GetCommentsRequest
+	if err := context.ShouldBindQuery(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	postID, err := uuid.Parse(req.PostID)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := database.GetCommentsByPostParams{
+		PostID: postID,
+		Limit:  req.PageSize,
+		Offset: (req.Page - 1) * req.PageSize,
+	}
+
+	comments, err := server.database.GetCommentsByPost(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+	}
+
+	context.JSON(http.StatusOK, comments)
+}

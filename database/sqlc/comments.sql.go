@@ -37,6 +37,48 @@ func (q *Queries) GetCommentById(ctx context.Context, id uuid.UUID) (Comment, er
 	return i, err
 }
 
+const getCommentsByPost = `-- name: GetCommentsByPost :many
+SELECT id, content, user_id, post_id, created_at FROM comments
+WHERE post_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetCommentsByPostParams struct {
+	PostID uuid.UUID `json:"post_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostParams) ([]Comment, error) {
+	rows, err := q.db.QueryContext(ctx, getCommentsByPost, arg.PostID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Comment{}
+	for rows.Next() {
+		var i Comment
+		if err := rows.Scan(
+			&i.ID,
+			&i.Content,
+			&i.UserID,
+			&i.PostID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sendComment = `-- name: SendComment :one
 INSERT INTO comments(id, content, user_id, post_id)
 VALUES ($1, $2, $3, $4)

@@ -64,13 +64,14 @@ func (server *Server) addRouter() {
 	router.GET("/users/following/count/:id", server.getFollowingCount)
 
 	router.GET("/users/:id", server.getUserById)
-	router.GET("/users", server.authMiddleware, server.getUsersByUsername)
+	router.GET("/users", server.getUsersByUsername)
 
 	router.POST("/posts", server.authMiddleware, server.createPost)
 	router.DELETE("/posts/:id", server.authMiddleware, server.deletePost)
 
 	router.POST("/posts/comments", server.authMiddleware, server.sendComment)
 	router.DELETE("/posts/comments/:id", server.authMiddleware, server.deleteComment)
+	router.GET("/posts/comments", server.getComments)
 
 	router.GET("/posts/:id", server.getPostById)
 	router.GET("/posts", server.getPostsByUser)
