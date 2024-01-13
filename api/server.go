@@ -22,7 +22,7 @@ func CreateServer(config util.Config, database *database.Queries) (*Server, erro
 		return nil, err
 	}
 
-	s3Controller, err := s3_bucket.ControllerMaker()
+	s3Controller, err := s3_bucket.NewController()
 	if err != nil {
 		return nil, err
 	}

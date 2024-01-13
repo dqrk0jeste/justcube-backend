@@ -17,7 +17,7 @@ type S3Controller struct {
 	client   *s3.Client
 }
 
-func ControllerMaker() (*S3Controller, error) {
+func NewController() (*S3Controller, error) {
 	awsConfig, err := aws_config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return nil, err

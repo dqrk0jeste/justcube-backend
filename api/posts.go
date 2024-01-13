@@ -16,7 +16,7 @@ import (
 )
 
 type CreatePostRequest struct {
-	ImageContent []*multipart.FileHeader `form:"image_content[]" binding:"required,max=5"`
+	ImageContent []*multipart.FileHeader `form:"image_content[]" binding:"max=5"`
 	TextContent  string                  `form:"text_content" binding:"required,max=500"`
 }
 
@@ -129,7 +129,7 @@ type GetPostByIdRequest struct {
 	ID string `uri:"id" binding:"required,uuid"`
 }
 
-// in the future, we will have public and private accounts so we will have to check if user that requested the post follows user whose post it is
+// in the future, we will have public and private accounts so we will have to check if user that requested the post follows the user whose post it is
 func (server *Server) getPostById(context *gin.Context) {
 
 	var req GetPostByIdRequest
