@@ -19,8 +19,8 @@ func (server *Server) addRouter() {
 	router.GET("/users/followers", server.getFollowers)
 	router.GET("/users/following", server.getFollowing)
 
-	router.GET("/users/followers/count/:id", server.getFollowersCount)
-	router.GET("/users/following/count/:id", server.getFollowingCount)
+	router.GET("/users/followers/:id", server.getFollowersCount)
+	router.GET("/users/following/:id", server.getFollowingCount)
 
 	router.GET("/users/:id", server.getUserById)
 	router.GET("/users", server.getUsersByUsername)

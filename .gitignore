@@ -1,3 +1,5 @@
 *.env
 images/
 images_for_upload/
+
+endpoints.md
