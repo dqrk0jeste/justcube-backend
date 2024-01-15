@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"sync"
 
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
 	"github.com/dqrk0jeste/letscube-backend/token"
@@ -42,20 +43,36 @@ func (server *Server) createPost(context *gin.Context) {
 
 	files := req.ImageContent
 
-	for _, image := range files {
-		if !slices.Contains(SupportedImageTypes, image.Header.Get("Content-Type")) {
+	for _, file := range files {
+		if !slices.Contains(SupportedImageTypes, file.Header.Get("Content-Type")) {
 			context.AbortWithStatus(http.StatusUnsupportedMediaType)
 			return
 		}
 	}
 
-	for index, image := range files {
-		imageNameToSave := id.String() + "_" + strconv.Itoa(index) + ".jpg"
+	ch := make(chan error)
+	wg := sync.WaitGroup{}
+	errorProcessingImagesCounter := 0
 
-		_, err := server.s3Controller.Upload(context, image, imageNameToSave)
+	for index, image := range files {
+		wg.Add(1)
+		go func(image *multipart.FileHeader, index int) {
+			defer wg.Done()
+			imageNameToSave := id.String() + "_" + strconv.Itoa(index) + ".jpg"
+
+			_, err := server.s3Controller.Upload(context, image, imageNameToSave)
+			ch <- err
+		}(image, index)
+	}
+
+	go func() {
+		defer close(ch)
+		wg.Wait()
+	}()
+
+	for err := range ch {
 		if err != nil {
-			context.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
+			errorProcessingImagesCounter++
 		}
 	}
 
@@ -72,7 +89,10 @@ func (server *Server) createPost(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusCreated, post)
+	context.JSON(http.StatusCreated, gin.H{
+		"post":             post,
+		"number_of_errors": errorProcessingImagesCounter,
+	})
 }
 
 type DeletePostRequest struct {
@@ -116,10 +136,12 @@ func (server *Server) deletePost(context *gin.Context) {
 	}
 
 	for i := 0; i < int(post.ImageCount); i++ {
-		err := server.s3Controller.Delete(context, id.String()+"_"+strconv.Itoa(i)+".jpg")
-		if err != nil {
-			fmt.Printf("there has been an error deleting image number %d\n", i)
-		}
+		go func(i int) {
+			err := server.s3Controller.Delete(context, id.String()+"_"+strconv.Itoa(i)+".jpg")
+			if err != nil {
+				fmt.Println("there has been an error deleting image" + id.String() + "_" + strconv.Itoa(i) + ".jpg")
+			}
+		}(i)
 	}
 
 	context.Status(http.StatusOK)

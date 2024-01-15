@@ -69,9 +69,6 @@ func (controller *S3Controller) Delete(context context.Context, nameOfTheFile st
 		Bucket: aws.String("letscube"),
 		Key:    aws.String(nameOfTheFile),
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
