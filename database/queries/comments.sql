@@ -7,14 +7,22 @@ RETURNING *;
 DELETE FROM comments WHERE id = $1;
 
 -- name: GetCommentById :one
-SELECT * FROM comments WHERE id = $1 LIMIT 1;
+SELECT comments.*, users.* , COUNT(replies.id) as number_of_replies
+FROM comments
+INNER JOIN users ON posts.user_id = users.id
+LEFT JOIN replies ON replies.comment_id = comments.id
+WHERE comments.id = $1
+LIMIT 1;
 
 -- name: GetCommentsByPost :many
-SELECT comments.*, COUNT(replies.id) as number_of_replies
-FROM comments
-LEFT JOIN replies ON replies.comment_id = comments.id
-WHERE post_id = $1
-GROUP BY comments.id
+SELECT *
+FROM 
+  ( SELECT comments.*, COUNT(replies.id) as number_of_replies
+  FROM comments
+  LEFT JOIN replies ON replies.comment_id = comments.id
+  WHERE post_id = $1
+  GROUP BY comments.id ) as c
+INNER JOIN users ON c.user_id = users.id
 ORDER BY number_of_replies DESC
 LIMIT $2 OFFSET $3;
 
@@ -27,11 +35,17 @@ RETURNING *;
 DELETE FROM replies WHERE id = $1;
 
 -- name: GetReplyById :one
-SELECT * FROM replies WHERE id = $1 LIMIT 1;
+SELECT *
+FROM replies
+INNER JOIN users ON replies.user_id = users.id
+WHERE replies.id = $1
+LIMIT 1;
 
 -- name: GetRepliesByComment :many
-SELECT * FROM replies
+SELECT *
+FROM replies
+INNER JOIN users ON replies.user_id = users.id
 WHERE comment_id = $1
-ORDER BY created_at ASC
+ORDER BY replies.created_at ASC
 LIMIT $2 OFFSET $3;
 

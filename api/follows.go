@@ -126,10 +126,10 @@ func (server *Server) getFollowers(context *gin.Context) {
 		return
 	}
 
-	res := make([]userResponse, 0)
+	res := make([]database.UserResponse, 0)
 
 	for _, user := range followers {
-		res = append(res, makeUserResponse(user))
+		res = append(res, user.MakeResponse())
 	}
 
 	context.JSON(http.StatusOK, res)
@@ -166,10 +166,10 @@ func (server *Server) getFollowing(context *gin.Context) {
 		return
 	}
 
-	res := make([]userResponse, 0)
+	res := make([]database.UserResponse, 0)
 
 	for _, user := range following {
-		res = append(res, makeUserResponse(user))
+		res = append(res, user.MakeResponse())
 	}
 
 	context.JSON(http.StatusOK, res)

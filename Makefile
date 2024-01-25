@@ -1,8 +1,7 @@
 DB_URL=postgresql://root:secret@localhost:5432/letscube?sslmode=disable
 
-#dont know what it is
 network:
-	docker network create bank-network
+	docker network create letcube-network
 
 postgres:
 	docker run --name postgres -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
@@ -46,4 +45,4 @@ test:
 server:
 	go run main.go
 
-.PHONY: network postgres createdb dropdb migrateup migratedown migrateup1 migratedown1 new_migration db_docs db_schema sqlc test server mock proto evans redis
+.PHONY: network postgres createdb dropdb migrateup migratedown migrateup1 migratedown1 new_migration db_docs db_schema sqlc test server

@@ -31,28 +31,54 @@ func (q *Queries) DeleteReply(ctx context.Context, id uuid.UUID) error {
 }
 
 const getCommentById = `-- name: GetCommentById :one
-SELECT id, content, user_id, post_id, created_at FROM comments WHERE id = $1 LIMIT 1
+SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, users.id, users.username, users.password_hash, users.created_at , COUNT(replies.id) as number_of_replies
+FROM comments
+INNER JOIN users ON posts.user_id = users.id
+LEFT JOIN replies ON replies.comment_id = comments.id
+WHERE comments.id = $1
+LIMIT 1
 `
 
-func (q *Queries) GetCommentById(ctx context.Context, id uuid.UUID) (Comment, error) {
+type GetCommentByIdRow struct {
+	ID              uuid.UUID `json:"id"`
+	Content         string    `json:"content"`
+	UserID          uuid.UUID `json:"user_id"`
+	PostID          uuid.UUID `json:"post_id"`
+	CreatedAt       time.Time `json:"created_at"`
+	ID_2            uuid.UUID `json:"id_2"`
+	Username        string    `json:"username"`
+	PasswordHash    string    `json:"password_hash"`
+	CreatedAt_2     time.Time `json:"created_at_2"`
+	NumberOfReplies int64     `json:"number_of_replies"`
+}
+
+func (q *Queries) GetCommentById(ctx context.Context, id uuid.UUID) (GetCommentByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, getCommentById, id)
-	var i Comment
+	var i GetCommentByIdRow
 	err := row.Scan(
 		&i.ID,
 		&i.Content,
 		&i.UserID,
 		&i.PostID,
 		&i.CreatedAt,
+		&i.ID_2,
+		&i.Username,
+		&i.PasswordHash,
+		&i.CreatedAt_2,
+		&i.NumberOfReplies,
 	)
 	return i, err
 }
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
-SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, COUNT(replies.id) as number_of_replies
-FROM comments
-LEFT JOIN replies ON replies.comment_id = comments.id
-WHERE post_id = $1
-GROUP BY comments.id
+SELECT c.id, content, user_id, post_id, c.created_at, number_of_replies, users.id, username, password_hash, users.created_at
+FROM 
+  ( SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, COUNT(replies.id) as number_of_replies
+  FROM comments
+  LEFT JOIN replies ON replies.comment_id = comments.id
+  WHERE post_id = $1
+  GROUP BY comments.id ) as c
+INNER JOIN users ON c.user_id = users.id
 ORDER BY number_of_replies DESC
 LIMIT $2 OFFSET $3
 `
@@ -70,6 +96,10 @@ type GetCommentsByPostRow struct {
 	PostID          uuid.UUID `json:"post_id"`
 	CreatedAt       time.Time `json:"created_at"`
 	NumberOfReplies int64     `json:"number_of_replies"`
+	ID_2            uuid.UUID `json:"id_2"`
+	Username        string    `json:"username"`
+	PasswordHash    string    `json:"password_hash"`
+	CreatedAt_2     time.Time `json:"created_at_2"`
 }
 
 func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostParams) ([]GetCommentsByPostRow, error) {
@@ -88,6 +118,10 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostPa
 			&i.PostID,
 			&i.CreatedAt,
 			&i.NumberOfReplies,
+			&i.ID_2,
+			&i.Username,
+			&i.PasswordHash,
+			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
 		}
@@ -103,9 +137,11 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostPa
 }
 
 const getRepliesByComment = `-- name: GetRepliesByComment :many
-SELECT id, content, user_id, comment_id, created_at FROM replies
+SELECT replies.id, content, user_id, comment_id, replies.created_at, users.id, username, password_hash, users.created_at
+FROM replies
+INNER JOIN users ON replies.user_id = users.id
 WHERE comment_id = $1
-ORDER BY created_at ASC
+ORDER BY replies.created_at ASC
 LIMIT $2 OFFSET $3
 `
 
@@ -115,21 +151,37 @@ type GetRepliesByCommentParams struct {
 	Offset    int32     `json:"offset"`
 }
 
-func (q *Queries) GetRepliesByComment(ctx context.Context, arg GetRepliesByCommentParams) ([]Reply, error) {
+type GetRepliesByCommentRow struct {
+	ID           uuid.UUID `json:"id"`
+	Content      string    `json:"content"`
+	UserID       uuid.UUID `json:"user_id"`
+	CommentID    uuid.UUID `json:"comment_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	ID_2         uuid.UUID `json:"id_2"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt_2  time.Time `json:"created_at_2"`
+}
+
+func (q *Queries) GetRepliesByComment(ctx context.Context, arg GetRepliesByCommentParams) ([]GetRepliesByCommentRow, error) {
 	rows, err := q.db.QueryContext(ctx, getRepliesByComment, arg.CommentID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Reply{}
+	items := []GetRepliesByCommentRow{}
 	for rows.Next() {
-		var i Reply
+		var i GetRepliesByCommentRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Content,
 			&i.UserID,
 			&i.CommentID,
 			&i.CreatedAt,
+			&i.ID_2,
+			&i.Username,
+			&i.PasswordHash,
+			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
 		}
@@ -145,18 +197,38 @@ func (q *Queries) GetRepliesByComment(ctx context.Context, arg GetRepliesByComme
 }
 
 const getReplyById = `-- name: GetReplyById :one
-SELECT id, content, user_id, comment_id, created_at FROM replies WHERE id = $1 LIMIT 1
+SELECT replies.id, content, user_id, comment_id, replies.created_at, users.id, username, password_hash, users.created_at
+FROM replies
+INNER JOIN users ON replies.user_id = users.id
+WHERE replies.id = $1
+LIMIT 1
 `
 
-func (q *Queries) GetReplyById(ctx context.Context, id uuid.UUID) (Reply, error) {
+type GetReplyByIdRow struct {
+	ID           uuid.UUID `json:"id"`
+	Content      string    `json:"content"`
+	UserID       uuid.UUID `json:"user_id"`
+	CommentID    uuid.UUID `json:"comment_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	ID_2         uuid.UUID `json:"id_2"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt_2  time.Time `json:"created_at_2"`
+}
+
+func (q *Queries) GetReplyById(ctx context.Context, id uuid.UUID) (GetReplyByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, getReplyById, id)
-	var i Reply
+	var i GetReplyByIdRow
 	err := row.Scan(
 		&i.ID,
 		&i.Content,
 		&i.UserID,
 		&i.CommentID,
 		&i.CreatedAt,
+		&i.ID_2,
+		&i.Username,
+		&i.PasswordHash,
+		&i.CreatedAt_2,
 	)
 	return i, err
 }

@@ -176,7 +176,7 @@ func (server *Server) getPostById(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, post)
+	context.JSON(http.StatusOK, post.MakeResponse())
 }
 
 type GetPostsByUserRequest struct {
@@ -210,7 +210,13 @@ func (server *Server) getPostsByUser(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, posts)
+	res := make([]database.PostResponse, 0)
+
+	for _, post := range posts {
+		res = append(res, post.MakeResponse())
+	}
+
+	context.JSON(http.StatusOK, res)
 }
 
 type PostCommentRequest struct {
@@ -336,7 +342,13 @@ func (server *Server) getComments(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 	}
 
-	context.JSON(http.StatusOK, comments)
+	res := make([]database.CommentResponse, 0)
+
+	for _, comment := range comments {
+		res = append(res, comment.MakeResponse())
+	}
+
+	context.JSON(http.StatusOK, res)
 }
 
 type PostReplyRequest struct {
@@ -462,5 +474,11 @@ func (server *Server) getReplies(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 	}
 
-	context.JSON(http.StatusOK, replies)
+	res := make([]database.ReplyResponse, 0)
+
+	for _, reply := range replies {
+		res = append(res, reply.MakeResponse())
+	}
+
+	context.JSON(http.StatusOK, res)
 }

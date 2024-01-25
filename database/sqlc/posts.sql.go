@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -52,26 +53,48 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
 }
 
 const getPostById = `-- name: GetPostById :one
-SELECT id, text_content, image_count, user_id, created_at FROM posts WHERE id = $1 LIMIT 1
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+WHERE posts.id = $1
+LIMIT 1
 `
 
-func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (Post, error) {
+type GetPostByIdRow struct {
+	ID           uuid.UUID `json:"id"`
+	TextContent  string    `json:"text_content"`
+	ImageCount   int32     `json:"image_count"`
+	UserID       uuid.UUID `json:"user_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	ID_2         uuid.UUID `json:"id_2"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt_2  time.Time `json:"created_at_2"`
+}
+
+func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (GetPostByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, getPostById, id)
-	var i Post
+	var i GetPostByIdRow
 	err := row.Scan(
 		&i.ID,
 		&i.TextContent,
 		&i.ImageCount,
 		&i.UserID,
 		&i.CreatedAt,
+		&i.ID_2,
+		&i.Username,
+		&i.PasswordHash,
+		&i.CreatedAt_2,
 	)
 	return i, err
 }
 
 const getPostsByUser = `-- name: GetPostsByUser :many
-SELECT id, text_content, image_count, user_id, created_at FROM posts
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
 WHERE user_id = $1
-ORDER BY created_at DESC
+ORDER BY posts.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -81,21 +104,37 @@ type GetPostsByUserParams struct {
 	Offset int32     `json:"offset"`
 }
 
-func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]Post, error) {
+type GetPostsByUserRow struct {
+	ID           uuid.UUID `json:"id"`
+	TextContent  string    `json:"text_content"`
+	ImageCount   int32     `json:"image_count"`
+	UserID       uuid.UUID `json:"user_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	ID_2         uuid.UUID `json:"id_2"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt_2  time.Time `json:"created_at_2"`
+}
+
+func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]GetPostsByUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getPostsByUser, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Post{}
+	items := []GetPostsByUserRow{}
 	for rows.Next() {
-		var i Post
+		var i GetPostsByUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TextContent,
 			&i.ImageCount,
 			&i.UserID,
 			&i.CreatedAt,
+			&i.ID_2,
+			&i.Username,
+			&i.PasswordHash,
+			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
 		}

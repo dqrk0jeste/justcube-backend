@@ -4,12 +4,18 @@ VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetPostById :one
-SELECT * FROM posts WHERE id = $1 LIMIT 1;
+SELECT *
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+WHERE posts.id = $1
+LIMIT 1;
 
 -- name: GetPostsByUser :many
-SELECT * FROM posts
+SELECT *
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
 WHERE user_id = $1
-ORDER BY created_at DESC
+ORDER BY posts.created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: DeletePost :exec

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 	"strings"
-	"time"
 
 	database "github.com/dqrk0jeste/letscube-backend/database/sqlc"
 	"github.com/dqrk0jeste/letscube-backend/token"
@@ -13,20 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
-
-type userResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Username  string    `json:"username"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-func makeUserResponse(user database.User) userResponse {
-	return userResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		CreatedAt: user.CreatedAt,
-	}
-}
 
 type CreateUserRequest struct {
 	Username string `json:"username" binding:"required,printascii,min=1,max=20"`
@@ -70,7 +55,7 @@ func (server *Server) createUser(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusCreated, makeUserResponse(user))
+	context.JSON(http.StatusCreated, user.MakeResponse())
 }
 
 type loginUserRequest struct {
@@ -79,8 +64,8 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	Token string       `json:"token"`
-	User  userResponse `json:"user"`
+	Token string                `json:"token"`
+	User  database.UserResponse `json:"user"`
 }
 
 func (server *Server) loginUser(context *gin.Context) {
@@ -114,7 +99,7 @@ func (server *Server) loginUser(context *gin.Context) {
 
 	context.JSON(http.StatusOK, loginUserResponse{
 		Token: token,
-		User:  makeUserResponse(user),
+		User:  user.MakeResponse(),
 	})
 }
 
@@ -145,7 +130,7 @@ func (server *Server) getUserById(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, makeUserResponse(user))
+	context.JSON(http.StatusOK, user.MakeResponse())
 }
 
 type GetUsersByUsernameRequest struct {
@@ -173,10 +158,10 @@ func (server *Server) getUsersByUsername(context *gin.Context) {
 		return
 	}
 
-	res := make([]userResponse, 0)
+	res := make([]database.UserResponse, 0)
 
 	for _, user := range users {
-		res = append(res, makeUserResponse(user))
+		res = append(res, user.MakeResponse())
 	}
 
 	context.JSON(http.StatusOK, res)
@@ -212,7 +197,7 @@ func (server *Server) updateUsersUsername(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, makeUserResponse(user))
+	context.JSON(http.StatusOK, user.MakeResponse())
 }
 
 type UpdateUsersPasswordRequest struct {
@@ -245,7 +230,7 @@ func (server *Server) updateUsersPassword(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, makeUserResponse(user))
+	context.JSON(http.StatusOK, user.MakeResponse())
 }
 
 // type GetUserByUsernameRequest struct {
@@ -269,7 +254,7 @@ func (server *Server) updateUsersPassword(context *gin.Context) {
 // 		return
 // 	}
 
-// 	context.JSON(http.StatusOK, makeUserResponse(user))
+// 	context.JSON(http.StatusOK, responses.MakeUserResponse(user))
 // }
 
 // type UpdateUserRequest struct {
