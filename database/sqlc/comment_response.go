@@ -8,7 +8,7 @@ import (
 
 type CommentResponse struct {
 	ID              uuid.UUID    `json:"id"`
-	Content         string       `json:"text_content"`
+	Content         string       `json:"content"`
 	User            UserResponse `json:"user"`
 	NumberOfReplies int64        `json:"number_of_replies"`
 	CreatedAt       time.Time    `json:"created_at"`
