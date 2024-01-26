@@ -1,9 +1,22 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+)
+
+var ALLOWED_ORIGINS = []string{
+	"http://localhost:3000",
+}
 
 func (server *Server) addRouter() {
 	router := gin.Default()
+
+	config := cors.DefaultConfig()
+	config.AllowOrigins = ALLOWED_ORIGINS
+	config.AllowHeaders = []string{"Origin", "Authorization", "Content-Type"}
+
+	router.Use(cors.New(config))
 
 	router.MaxMultipartMemory = 5 << 20
 
