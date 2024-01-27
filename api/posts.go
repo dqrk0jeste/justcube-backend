@@ -153,7 +153,6 @@ type GetPostByIdRequest struct {
 
 // in the future, we will have public and private accounts so we will have to check if user that requested the post follows the user whose post it is
 func (server *Server) getPostById(context *gin.Context) {
-
 	var req GetPostByIdRequest
 	if err := context.ShouldBindUri(&req); err != nil {
 		context.JSON(http.StatusBadRequest, errorResponse(err))
@@ -205,6 +204,41 @@ func (server *Server) getPostsByUser(context *gin.Context) {
 	}
 
 	posts, err := server.database.GetPostsByUser(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	res := make([]database.PostResponse, 0)
+
+	for _, post := range posts {
+		res = append(res, post.MakeResponse())
+	}
+
+	context.JSON(http.StatusOK, res)
+}
+
+type GetFeedRequest struct {
+	Page     int32 `form:"page_number" binding:"required"`
+	PageSize int32 `form:"page_size" binding:"required,max=20"`
+}
+
+func (server *Server) getFeed(context *gin.Context) {
+	var req GetFeedRequest
+	if err := context.ShouldBindQuery(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	authorizationPayload := context.MustGet("authorization_payload").(*token.Payload)
+
+	arg := database.GetFeedParams{
+		UserID: authorizationPayload.UserID,
+		Offset: (req.Page - 1) * req.PageSize,
+		Limit:  req.PageSize,
+	}
+
+	posts, err := server.database.GetFeed(context, arg)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

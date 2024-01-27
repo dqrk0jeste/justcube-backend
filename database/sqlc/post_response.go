@@ -45,3 +45,19 @@ func (post GetPostsByUserRow) MakeResponse() PostResponse {
 		User:        user,
 	}
 }
+
+func (post GetFeedRow) MakeResponse() PostResponse {
+	user := UserResponse{
+		ID:        post.UserID,
+		Username:  post.Username,
+		CreatedAt: post.CreatedAt_2,
+	}
+
+	return PostResponse{
+		ID:          post.ID,
+		TextContent: post.TextContent,
+		ImageCount:  post.ImageCount,
+		CreatedAt:   post.CreatedAt,
+		User:        user,
+	}
+}

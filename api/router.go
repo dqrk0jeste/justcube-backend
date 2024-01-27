@@ -9,12 +9,18 @@ var ALLOWED_ORIGINS = []string{
 	"http://localhost:3000",
 }
 
+var ALLOWED_HEADERS = []string{
+	"Origin",
+	"Authorization",
+	"Content-Type",
+}
+
 func (server *Server) addRouter() {
 	router := gin.Default()
 
 	config := cors.DefaultConfig()
 	config.AllowOrigins = ALLOWED_ORIGINS
-	config.AllowHeaders = []string{"Origin", "Authorization", "Content-Type"}
+	config.AllowHeaders = ALLOWED_HEADERS
 
 	router.Use(cors.New(config))
 
@@ -53,6 +59,7 @@ func (server *Server) addRouter() {
 
 	router.GET("/posts/:id", server.getPostById)
 	router.GET("/posts", server.getPostsByUser)
+	router.GET("/posts/feed", server.authMiddleware, server.getFeed)
 
 	server.router = router
 }

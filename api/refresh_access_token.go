@@ -30,7 +30,7 @@ func (server *Server) refreshAccessToken(context *gin.Context) {
 		return
 	}
 
-	if session.IsBlocked {
+	if session.IsBlocked || session.UserID != payload.UserID {
 		context.JSON(http.StatusForbidden, errorResponse(err))
 		return
 	}

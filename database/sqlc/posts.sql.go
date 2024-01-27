@@ -52,6 +52,71 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getFeed = `-- name: GetFeed :many
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+WHERE user_id IN (
+  SELECT followed_user.id
+  FROM follows
+  INNER JOIN users as followed_user ON followed_user.id = follows.followed_user_id
+  WHERE follows.user_id = $1
+)
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetFeedParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Limit  int32     `json:"limit"`
+	Offset int32     `json:"offset"`
+}
+
+type GetFeedRow struct {
+	ID           uuid.UUID `json:"id"`
+	TextContent  string    `json:"text_content"`
+	ImageCount   int32     `json:"image_count"`
+	UserID       uuid.UUID `json:"user_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	ID_2         uuid.UUID `json:"id_2"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt_2  time.Time `json:"created_at_2"`
+}
+
+func (q *Queries) GetFeed(ctx context.Context, arg GetFeedParams) ([]GetFeedRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFeed, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetFeedRow{}
+	for rows.Next() {
+		var i GetFeedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TextContent,
+			&i.ImageCount,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.ID_2,
+			&i.Username,
+			&i.PasswordHash,
+			&i.CreatedAt_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostById = `-- name: GetPostById :one
 SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
 FROM posts

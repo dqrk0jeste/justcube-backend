@@ -18,6 +18,19 @@ WHERE user_id = $1
 ORDER BY posts.created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: GetFeed :many
+SELECT *
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+WHERE user_id IN (
+  SELECT followed_user.id
+  FROM follows
+  INNER JOIN users as followed_user ON followed_user.id = follows.followed_user_id
+  WHERE follows.user_id = $1
+)
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3;
+
 -- name: DeletePost :exec
 DELETE FROM posts WHERE id = $1;
 
