@@ -64,10 +64,11 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	Token string                `json:"token"`
-	User  database.UserResponse `json:"user"`
+	AccessToken string                `json:"access_token"`
+	User        database.UserResponse `json:"user"`
 }
 
+// TODO: add email verification
 func (server *Server) loginUser(context *gin.Context) {
 	var req loginUserRequest
 	if err := context.ShouldBindJSON(&req); err != nil {
@@ -91,15 +92,40 @@ func (server *Server) loginUser(context *gin.Context) {
 		return
 	}
 
-	token, err := server.tokenMaker.CreateToken(user.ID, server.config.TokenDuration)
+	accessToken, _, err := server.tokenMaker.CreateToken(user.ID, server.config.AccessTokenDuration)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
+	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(user.ID, server.config.RefreshTokenDuration)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	server.database.CreateSession(context, database.CreateSessionParams{
+		ID:           refreshPayload.ID,
+		UserID:       refreshPayload.UserID,
+		RefreshToken: refreshToken,
+		ClientIp:     context.ClientIP(),
+		IsBlocked:    false,
+		ExpiresAt:    refreshPayload.ExpiredAt,
+	})
+
+	context.SetCookie(
+		"refresh_token",
+		refreshToken,
+		int(server.config.RefreshTokenDuration.Seconds()),
+		"/",
+		"localhost",
+		false,
+		true,
+	)
+
 	context.JSON(http.StatusOK, loginUserResponse{
-		Token: token,
-		User:  user.MakeResponse(),
+		AccessToken: accessToken,
+		User:        user.MakeResponse(),
 	})
 }
 

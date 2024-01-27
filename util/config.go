@@ -11,7 +11,8 @@ type Config struct {
 	DatabaseDriver        string        `mapstructure:"DB_DRIVER"`
 	ServerAddress         string        `mapstructure:"SERVER_ADDRESS"`
 	TokenSecret           string        `mapstructure:"TOKEN_SECRET"`
-	TokenDuration         time.Duration `mapstructure:"TOKEN_DURATION"`
+	AccessTokenDuration   time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	RefreshTokenDuration  time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
 	AWS_REGION            string        `mapstructure:"AWS_REGION"`
 	AWS_ACCESS_KEY_ID     string        `mapstructure:"AWS_ACCESS_KEY_ID"`
 	AWS_SECRET_ACCESS_KEY string        `mapstructure:"AWS_SECRET_ACCESS_KEY"`
