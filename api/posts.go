@@ -253,6 +253,33 @@ func (server *Server) getFeed(context *gin.Context) {
 	context.JSON(http.StatusOK, res)
 }
 
+func (server *Server) getGuestFeed(context *gin.Context) {
+	var req GetFeedRequest
+	if err := context.ShouldBindQuery(&req); err != nil {
+		context.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := database.GetGuestFeedParams{
+		Offset: (req.Page - 1) * req.PageSize,
+		Limit:  req.PageSize,
+	}
+
+	posts, err := server.database.GetGuestFeed(context, arg)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	res := make([]database.PostResponse, 0)
+
+	for _, post := range posts {
+		res = append(res, post.MakeResponse())
+	}
+
+	context.JSON(http.StatusOK, res)
+}
+
 type PostCommentRequest struct {
 	PostID  string `json:"post_id" binding:"required,uuid"`
 	Content string `json:"content" binding:"required,max=200"`

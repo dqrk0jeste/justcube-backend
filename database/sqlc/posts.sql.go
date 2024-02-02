@@ -117,6 +117,64 @@ func (q *Queries) GetFeed(ctx context.Context, arg GetFeedParams) ([]GetFeedRow,
 	return items, nil
 }
 
+const getGuestFeed = `-- name: GetGuestFeed :many
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+ORDER BY posts.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetGuestFeedParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetGuestFeedRow struct {
+	ID           uuid.UUID `json:"id"`
+	TextContent  string    `json:"text_content"`
+	ImageCount   int32     `json:"image_count"`
+	UserID       uuid.UUID `json:"user_id"`
+	CreatedAt    time.Time `json:"created_at"`
+	ID_2         uuid.UUID `json:"id_2"`
+	Username     string    `json:"username"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt_2  time.Time `json:"created_at_2"`
+}
+
+func (q *Queries) GetGuestFeed(ctx context.Context, arg GetGuestFeedParams) ([]GetGuestFeedRow, error) {
+	rows, err := q.db.QueryContext(ctx, getGuestFeed, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetGuestFeedRow{}
+	for rows.Next() {
+		var i GetGuestFeedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TextContent,
+			&i.ImageCount,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.ID_2,
+			&i.Username,
+			&i.PasswordHash,
+			&i.CreatedAt_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostById = `-- name: GetPostById :one
 SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
 FROM posts

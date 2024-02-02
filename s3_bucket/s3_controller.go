@@ -34,7 +34,11 @@ func NewController() (*S3Controller, error) {
 	return controller, nil
 }
 
-func (controller *S3Controller) Upload(context context.Context, file *multipart.FileHeader, nameToSaveAs string) (*manager.UploadOutput, error) {
+func (controller *S3Controller) Upload(
+	context context.Context,
+	file *multipart.FileHeader,
+	nameToSaveAs string,
+) (*manager.UploadOutput, error) {
 	openedImage, err := file.Open()
 	if err != nil {
 		return nil, err
@@ -52,16 +56,11 @@ func (controller *S3Controller) Upload(context context.Context, file *multipart.
 		imageToSave = jpegImage
 	}
 
-	uploadedFile, err := controller.uploader.Upload(context, &s3.PutObjectInput{
+	return controller.uploader.Upload(context, &s3.PutObjectInput{
 		Bucket: aws.String("letscube"),
 		Key:    aws.String(nameToSaveAs),
 		Body:   imageToSave,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return uploadedFile, nil
 }
 
 func (controller *S3Controller) Delete(context context.Context, nameOfTheFile string) error {

@@ -60,6 +60,7 @@ func (server *Server) addRouter() {
 	router.GET("/posts/:id", server.getPostById)
 	router.GET("/posts", server.getPostsByUser)
 	router.GET("/posts/feed", server.authMiddleware, server.getFeed)
+	router.GET("/posts/guest-feed", server.getGuestFeed)
 
 	server.router = router
 }

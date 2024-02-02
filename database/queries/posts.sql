@@ -31,6 +31,13 @@ WHERE user_id IN (
 ORDER BY posts.created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: GetGuestFeed :many
+SELECT *
+FROM posts
+INNER JOIN users ON posts.user_id = users.id
+ORDER BY posts.created_at DESC
+LIMIT $1 OFFSET $2;
+
 -- name: DeletePost :exec
 DELETE FROM posts WHERE id = $1;
 
