@@ -35,6 +35,12 @@ func (server *Server) refreshAccessToken(context *gin.Context) {
 		return
 	}
 
+	user, err := server.database.GetUserById(context, session.UserID)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	newAccessToken, _, err := server.tokenMaker.CreateToken(session.UserID, server.config.AccessTokenDuration)
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -43,5 +49,6 @@ func (server *Server) refreshAccessToken(context *gin.Context) {
 
 	context.JSON(http.StatusOK, gin.H{
 		"access_token": newAccessToken,
+		"user":         user.MakeResponse(),
 	})
 }
