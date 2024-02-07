@@ -7,6 +7,7 @@ import (
 
 var ALLOWED_ORIGINS = []string{
 	"http://localhost:3000",
+	"http://localhost:5173",
 }
 
 var ALLOWED_HEADERS = []string{

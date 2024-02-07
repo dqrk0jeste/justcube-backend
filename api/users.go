@@ -119,7 +119,7 @@ func (server *Server) loginUser(context *gin.Context) {
 		int(server.config.RefreshTokenDuration.Seconds()),
 		"/",
 		"localhost",
-		false,
+		true,
 		true,
 	)
 

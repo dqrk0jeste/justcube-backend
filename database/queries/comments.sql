@@ -23,7 +23,7 @@ FROM
   WHERE post_id = $1
   GROUP BY comments.id ) as c
 INNER JOIN users ON c.user_id = users.id
-ORDER BY number_of_replies DESC
+ORDER BY number_of_replies DESC, c.created_at ASC
 LIMIT $2 OFFSET $3;
 
 -- name: PostReply :one
