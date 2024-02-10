@@ -30,7 +30,7 @@ func (q *Queries) FollowUser(ctx context.Context, arg FollowUserParams) (Follow,
 }
 
 const getFollowers = `-- name: GetFollowers :many
-SELECT following_users.id, following_users.username, following_users.password_hash, following_users.created_at FROM follows
+SELECT following_users.id, following_users.username, following_users.password_hash, following_users.email, following_users.created_at FROM follows
 INNER JOIN users as followed_users on follows.followed_user_id = followed_users.id
 INNER JOIN users as following_users on follows.user_id = following_users.id
 WHERE follows.followed_user_id = $1
@@ -56,6 +56,7 @@ func (q *Queries) GetFollowers(ctx context.Context, arg GetFollowersParams) ([]U
 			&i.ID,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -83,7 +84,7 @@ func (q *Queries) GetFollowersCount(ctx context.Context, followedUserID uuid.UUI
 }
 
 const getFollowing = `-- name: GetFollowing :many
-SELECT followed_users.id, followed_users.username, followed_users.password_hash, followed_users.created_at FROM follows
+SELECT followed_users.id, followed_users.username, followed_users.password_hash, followed_users.email, followed_users.created_at FROM follows
 INNER JOIN users as followed_users on follows.followed_user_id = followed_users.id
 INNER JOIN users as following_users on follows.user_id = following_users.id
 WHERE follows.user_id = $1
@@ -109,6 +110,7 @@ func (q *Queries) GetFollowing(ctx context.Context, arg GetFollowingParams) ([]U
 			&i.ID,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

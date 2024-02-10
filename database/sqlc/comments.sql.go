@@ -31,7 +31,7 @@ func (q *Queries) DeleteReply(ctx context.Context, id uuid.UUID) error {
 }
 
 const getCommentById = `-- name: GetCommentById :one
-SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, users.id, users.username, users.password_hash, users.created_at , COUNT(replies.id) as number_of_replies
+SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, users.id, users.username, users.password_hash, users.email, users.created_at , COUNT(replies.id) as number_of_replies
 FROM comments
 INNER JOIN users ON posts.user_id = users.id
 LEFT JOIN replies ON replies.comment_id = comments.id
@@ -48,6 +48,7 @@ type GetCommentByIdRow struct {
 	ID_2            uuid.UUID `json:"id_2"`
 	Username        string    `json:"username"`
 	PasswordHash    string    `json:"password_hash"`
+	Email           string    `json:"email"`
 	CreatedAt_2     time.Time `json:"created_at_2"`
 	NumberOfReplies int64     `json:"number_of_replies"`
 }
@@ -64,6 +65,7 @@ func (q *Queries) GetCommentById(ctx context.Context, id uuid.UUID) (GetCommentB
 		&i.ID_2,
 		&i.Username,
 		&i.PasswordHash,
+		&i.Email,
 		&i.CreatedAt_2,
 		&i.NumberOfReplies,
 	)
@@ -71,7 +73,7 @@ func (q *Queries) GetCommentById(ctx context.Context, id uuid.UUID) (GetCommentB
 }
 
 const getCommentsByPost = `-- name: GetCommentsByPost :many
-SELECT c.id, content, user_id, post_id, c.created_at, number_of_replies, users.id, username, password_hash, users.created_at
+SELECT c.id, content, user_id, post_id, c.created_at, number_of_replies, users.id, username, password_hash, email, users.created_at
 FROM 
   ( SELECT comments.id, comments.content, comments.user_id, comments.post_id, comments.created_at, COUNT(replies.id) as number_of_replies
   FROM comments
@@ -79,7 +81,7 @@ FROM
   WHERE post_id = $1
   GROUP BY comments.id ) as c
 INNER JOIN users ON c.user_id = users.id
-ORDER BY number_of_replies DESC, c.created_at ASC
+ORDER BY number_of_replies DESC, c.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -99,6 +101,7 @@ type GetCommentsByPostRow struct {
 	ID_2            uuid.UUID `json:"id_2"`
 	Username        string    `json:"username"`
 	PasswordHash    string    `json:"password_hash"`
+	Email           string    `json:"email"`
 	CreatedAt_2     time.Time `json:"created_at_2"`
 }
 
@@ -121,6 +124,7 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostPa
 			&i.ID_2,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
@@ -137,7 +141,7 @@ func (q *Queries) GetCommentsByPost(ctx context.Context, arg GetCommentsByPostPa
 }
 
 const getRepliesByComment = `-- name: GetRepliesByComment :many
-SELECT replies.id, content, user_id, comment_id, replies.created_at, users.id, username, password_hash, users.created_at
+SELECT replies.id, content, user_id, comment_id, replies.created_at, users.id, username, password_hash, email, users.created_at
 FROM replies
 INNER JOIN users ON replies.user_id = users.id
 WHERE comment_id = $1
@@ -160,6 +164,7 @@ type GetRepliesByCommentRow struct {
 	ID_2         uuid.UUID `json:"id_2"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
+	Email        string    `json:"email"`
 	CreatedAt_2  time.Time `json:"created_at_2"`
 }
 
@@ -181,6 +186,7 @@ func (q *Queries) GetRepliesByComment(ctx context.Context, arg GetRepliesByComme
 			&i.ID_2,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
@@ -197,7 +203,7 @@ func (q *Queries) GetRepliesByComment(ctx context.Context, arg GetRepliesByComme
 }
 
 const getReplyById = `-- name: GetReplyById :one
-SELECT replies.id, content, user_id, comment_id, replies.created_at, users.id, username, password_hash, users.created_at
+SELECT replies.id, content, user_id, comment_id, replies.created_at, users.id, username, password_hash, email, users.created_at
 FROM replies
 INNER JOIN users ON replies.user_id = users.id
 WHERE replies.id = $1
@@ -213,6 +219,7 @@ type GetReplyByIdRow struct {
 	ID_2         uuid.UUID `json:"id_2"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
+	Email        string    `json:"email"`
 	CreatedAt_2  time.Time `json:"created_at_2"`
 }
 
@@ -228,6 +235,7 @@ func (q *Queries) GetReplyById(ctx context.Context, id uuid.UUID) (GetReplyByIdR
 		&i.ID_2,
 		&i.Username,
 		&i.PasswordHash,
+		&i.Email,
 		&i.CreatedAt_2,
 	)
 	return i, err

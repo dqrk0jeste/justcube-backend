@@ -53,7 +53,7 @@ func (q *Queries) DeletePost(ctx context.Context, id uuid.UUID) error {
 }
 
 const getFeed = `-- name: GetFeed :many
-SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, email, users.created_at
 FROM posts
 INNER JOIN users ON posts.user_id = users.id
 WHERE user_id IN (
@@ -81,6 +81,7 @@ type GetFeedRow struct {
 	ID_2         uuid.UUID `json:"id_2"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
+	Email        string    `json:"email"`
 	CreatedAt_2  time.Time `json:"created_at_2"`
 }
 
@@ -102,6 +103,7 @@ func (q *Queries) GetFeed(ctx context.Context, arg GetFeedParams) ([]GetFeedRow,
 			&i.ID_2,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
@@ -118,7 +120,7 @@ func (q *Queries) GetFeed(ctx context.Context, arg GetFeedParams) ([]GetFeedRow,
 }
 
 const getGuestFeed = `-- name: GetGuestFeed :many
-SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, email, users.created_at
 FROM posts
 INNER JOIN users ON posts.user_id = users.id
 ORDER BY posts.created_at DESC
@@ -139,6 +141,7 @@ type GetGuestFeedRow struct {
 	ID_2         uuid.UUID `json:"id_2"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
+	Email        string    `json:"email"`
 	CreatedAt_2  time.Time `json:"created_at_2"`
 }
 
@@ -160,6 +163,7 @@ func (q *Queries) GetGuestFeed(ctx context.Context, arg GetGuestFeedParams) ([]G
 			&i.ID_2,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
@@ -176,7 +180,7 @@ func (q *Queries) GetGuestFeed(ctx context.Context, arg GetGuestFeedParams) ([]G
 }
 
 const getPostById = `-- name: GetPostById :one
-SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, email, users.created_at
 FROM posts
 INNER JOIN users ON posts.user_id = users.id
 WHERE posts.id = $1
@@ -192,6 +196,7 @@ type GetPostByIdRow struct {
 	ID_2         uuid.UUID `json:"id_2"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
+	Email        string    `json:"email"`
 	CreatedAt_2  time.Time `json:"created_at_2"`
 }
 
@@ -207,13 +212,14 @@ func (q *Queries) GetPostById(ctx context.Context, id uuid.UUID) (GetPostByIdRow
 		&i.ID_2,
 		&i.Username,
 		&i.PasswordHash,
+		&i.Email,
 		&i.CreatedAt_2,
 	)
 	return i, err
 }
 
 const getPostsByUser = `-- name: GetPostsByUser :many
-SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, users.created_at
+SELECT posts.id, text_content, image_count, user_id, posts.created_at, users.id, username, password_hash, email, users.created_at
 FROM posts
 INNER JOIN users ON posts.user_id = users.id
 WHERE user_id = $1
@@ -236,6 +242,7 @@ type GetPostsByUserRow struct {
 	ID_2         uuid.UUID `json:"id_2"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"password_hash"`
+	Email        string    `json:"email"`
 	CreatedAt_2  time.Time `json:"created_at_2"`
 }
 
@@ -257,6 +264,7 @@ func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) 
 			&i.ID_2,
 			&i.Username,
 			&i.PasswordHash,
+			&i.Email,
 			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err

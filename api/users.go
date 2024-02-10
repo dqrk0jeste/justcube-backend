@@ -14,8 +14,9 @@ import (
 )
 
 type CreateUserRequest struct {
-	Username string `json:"username" binding:"required,printascii,min=1,max=20"`
-	Password string `json:"password" binding:"required,printascii,min=6,max=60"`
+	Username string `json:"username" binding:"required,printascii,min=1,max=20,excludesrune= "`
+	Password string `json:"password" binding:"required,printascii,min=6"`
+	Email    string `json:"email" binding:"required,email"`
 }
 
 func (server *Server) createUser(context *gin.Context) {
@@ -39,8 +40,9 @@ func (server *Server) createUser(context *gin.Context) {
 
 	arg := database.CreateUserParams{
 		ID:           id,
-		Username:     strings.Trim(req.Username, " "),
+		Username:     req.Username,
 		PasswordHash: passwordHash,
+		Email:        req.Email,
 	}
 
 	user, err := server.database.CreateUser(context, arg)
