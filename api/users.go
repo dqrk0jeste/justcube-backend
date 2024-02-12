@@ -66,8 +66,9 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string                `json:"access_token"`
-	User        database.UserResponse `json:"user"`
+	AccessToken  string                `json:"access_token"`
+	RefreshToken string                `json:"refresh_token"`
+	User         database.UserResponse `json:"user"`
 }
 
 // TODO: add email verification
@@ -115,19 +116,10 @@ func (server *Server) loginUser(context *gin.Context) {
 		ExpiresAt:    refreshPayload.ExpiredAt,
 	})
 
-	context.SetCookie(
-		"refresh_token",
-		refreshToken,
-		int(server.config.RefreshTokenDuration.Seconds()),
-		"/",
-		"localhost",
-		true,
-		true,
-	)
-
 	context.JSON(http.StatusOK, loginUserResponse{
-		AccessToken: accessToken,
-		User:        user.MakeResponse(),
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         user.MakeResponse(),
 	})
 }
 
