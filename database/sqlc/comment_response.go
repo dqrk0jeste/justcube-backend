@@ -48,7 +48,7 @@ func (comment GetCommentsByPostRow) MakeResponse() CommentResponse {
 
 type ReplyResponse struct {
 	ID        uuid.UUID    `json:"id"`
-	Content   string       `json:"text_content"`
+	Content   string       `json:"content"`
 	User      UserResponse `json:"user"`
 	CreatedAt time.Time    `json:"created_at"`
 }

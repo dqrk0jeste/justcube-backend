@@ -27,41 +27,50 @@ func (server *Server) addRouter() {
 
 	router.MaxMultipartMemory = 5 << 20
 
-	router.POST("/users", server.createUser)
-	router.POST("/users/login", server.loginUser)
+	usersRouter := router.Group("/users")
 
-	router.GET("/users/refresh", server.refreshAccessToken)
+	usersRouter.POST("/", server.createUser)
+	usersRouter.POST("/login", server.loginUser)
 
-	router.PUT("/users/username", server.authMiddleware, server.updateUsersUsername)
-	router.PUT("/users/password", server.authMiddleware, server.updateUsersPassword)
+	usersRouter.GET("/refresh", server.refreshAccessToken)
 
-	router.POST("/users/follow/:id", server.authMiddleware, server.followUser)
-	router.DELETE("/users/follow/:id", server.authMiddleware, server.unfollowUser)
+	usersRouter.PUT("/username", server.authMiddleware, server.updateUsersUsername)
+	usersRouter.PUT("/password", server.authMiddleware, server.updateUsersPassword)
 
-	router.GET("/users/followers", server.getFollowers)
-	router.GET("/users/following", server.getFollowing)
+	usersRouter.POST("/follows/:id", server.authMiddleware, server.followUser)
+	usersRouter.DELETE("/follows/:id", server.authMiddleware, server.unfollowUser)
 
-	router.GET("/users/followers/:id", server.getFollowersCount)
-	router.GET("/users/following/:id", server.getFollowingCount)
+	usersRouter.GET("/followers", server.getFollowers)
+	usersRouter.GET("/following", server.getFollowing)
 
-	router.GET("/users/:id", server.getUserById)
-	router.GET("/users", server.getUsersByUsername)
+	usersRouter.GET("/followers/count/:id", server.getFollowersCount)
+	usersRouter.GET("/following/count/:id", server.getFollowingCount)
 
-	router.POST("/posts", server.authMiddleware, server.createPost)
-	router.DELETE("/posts/:id", server.authMiddleware, server.deletePost)
+	usersRouter.GET("/:id", server.getUserById)
+	usersRouter.GET("/", server.getUsersByUsername)
 
-	router.POST("/posts/comments", server.authMiddleware, server.postComment)
-	router.DELETE("/posts/comments/:id", server.authMiddleware, server.deleteComment)
-	router.GET("/posts/comments", server.getComments)
+	postsRouter := router.Group("/posts")
 
-	router.POST("/posts/comments/replies", server.authMiddleware, server.postReply)
-	router.DELETE("/posts/comments/replies/:id", server.authMiddleware, server.deleteReply)
-	router.GET("/posts/comments/replies", server.getReplies)
+	postsRouter.POST("/", server.authMiddleware, server.createPost)
+	postsRouter.DELETE("/:id", server.authMiddleware, server.deletePost)
 
-	router.GET("/posts/:id", server.getPostById)
-	router.GET("/posts", server.getPostsByUser)
-	router.GET("/posts/feed", server.authMiddleware, server.getFeed)
-	router.GET("/posts/guest-feed", server.getGuestFeed)
+	postsRouter.GET(":id", server.getPostById)
+	postsRouter.GET("/", server.getPostsByUser)
+
+	postsRouter.GET("/feed", server.authMiddleware, server.getFeed)
+	postsRouter.GET("/guest-feed", server.getGuestFeed)
+
+	commentsRouter := postsRouter.Group("/comments")
+
+	commentsRouter.POST("/", server.authMiddleware, server.postComment)
+	commentsRouter.DELETE("/:id", server.authMiddleware, server.deleteComment)
+	commentsRouter.GET("/", server.getComments)
+
+	repliesRouter := commentsRouter.Group("/replies")
+
+	repliesRouter.POST("/", server.authMiddleware, server.postReply)
+	repliesRouter.DELETE("/:id", server.authMiddleware, server.deleteReply)
+	repliesRouter.GET("/", server.getReplies)
 
 	server.router = router
 }
